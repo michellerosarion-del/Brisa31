@@ -1,0 +1,252 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Store products information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "color": { "type": "string" },
+        "size": { "type": "string" },
+        "cost": { "type": "number" },
+        "price": { "type": "number" },
+        "stock": { "type": "integer" },
+        "min_stock": { "type": "integer" },
+        "brand": { "type": "string" },
+        "code": { "type": "string" },
+        "image_url": { "type": "string" },
+        "label": { "type": "string" },
+        "supplier_id": { "type": "string" },
+        "cash_price": { "type": "number" },
+        "card_price": { "type": "number" },
+        "promo_price": { "type": "number" },
+        "date_added": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "stock"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Store customers information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "instagram": { "type": "string" },
+        "city": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Store sales information",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "customer_id": { "type": "string" },
+        "product_id": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "unit_price": { "type": "number" },
+        "total_value": { "type": "number" },
+        "size": { "type": "string" },
+        "payment_method": { "type": "string" },
+        "seller_id": { "type": "string" },
+        "discount_value": { "type": "number" },
+        "discount_type": { "type": "string" },
+        "final_price": { "type": "number" },
+        "profit": { "type": "number" },
+        "sale_group_id": { "type": "string" }
+      },
+      "required": ["product_id", "quantity", "total_value"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Store expenses information",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "value": { "type": "number" },
+        "observations": { "type": "string" }
+      },
+      "required": ["value", "description"]
+    },
+    "Seller": {
+      "title": "Seller",
+      "description": "Store sellers information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string" },
+        "commission_percentage": { "type": "number" }
+      },
+      "required": ["name"]
+    },
+    "StoreConfig": {
+      "title": "StoreConfig",
+      "description": "Store configuration",
+      "type": "object",
+      "properties": {
+        "nome_loja": { "type": "string" },
+        "telefone_whatsapp": { "type": "string" },
+        "mensagem_padrao_whatsapp": { "type": "string" },
+        "monthly_goal": { "type": "number" },
+        "data_atualizacao": { "type": "string", "format": "date-time" }
+      }
+    },
+    "StockMovement": {
+      "title": "StockMovement",
+      "description": "Track stock changes",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "product_id": { "type": "string" },
+        "produto": { "type": "string", "description": "Product name" },
+        "marca": { "type": "string" },
+        "cor": { "type": "string" },
+        "tamanho": { "type": "string" },
+        "quantidade": { "type": "integer" },
+        "tipo_movimento": { "type": "string", "enum": ["entrada", "venda", "ajuste", "reposicao"] },
+        "usuario": { "type": "string", "description": "User who performed the movement" },
+        "observations": { "type": "string" }
+      },
+      "required": ["product_id", "quantidade", "tipo_movimento", "produto"]
+    },
+    "SaleItem": {
+      "title": "SaleItem",
+      "description": "Individual items in a sale",
+      "type": "object",
+      "properties": {
+        "sale_id": { "type": "string" },
+        "product_id": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "unit_price": { "type": "number" },
+        "total_price": { "type": "number" },
+        "size": { "type": "string" }
+      },
+      "required": ["sale_id", "product_id", "quantity"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System users",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["email", "uid"]
+    },
+    "Ad": {
+      "title": "Ad",
+      "description": "Advertising campaigns",
+      "type": "object",
+      "properties": {
+        "platform": { "type": "string" },
+        "investment": { "type": "number" },
+        "sales_generated": { "type": "integer" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["platform", "investment"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Product suppliers",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "products_supplied": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "SupplierOrder": {
+      "title": "SupplierOrder",
+      "description": "Orders to suppliers",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "supplier": { "type": "string" },
+        "product_id": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "status": { "type": "string" },
+        "product_name": { "type": "string" }
+      },
+      "required": ["supplier", "product_id", "quantity"]
+    },
+    "StockPurchase": {
+      "title": "StockPurchase",
+      "description": "Stock purchase history",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "supplier_name": { "type": "string" },
+        "product_name": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "value": { "type": "number" }
+      },
+      "required": ["supplier_name", "product_name", "quantity", "value"]
+    }
+  },
+  "firestore": {
+    "/produtos": {
+      "schema": "Product",
+      "description": "Collection of products"
+    },
+    "/clientes": {
+      "schema": "Customer",
+      "description": "Collection of customers"
+    },
+    "/vendas": {
+      "schema": "Sale",
+      "description": "Collection of sales"
+    },
+    "/itens_venda": {
+      "schema": "SaleItem",
+      "description": "Collection of sale items"
+    },
+    "/gastos": {
+      "schema": "Expense",
+      "description": "Collection of expenses"
+    },
+    "/usuarios": {
+      "schema": "User",
+      "description": "Collection of system users"
+    },
+    "/anuncios": {
+      "schema": "Ad",
+      "description": "Collection of advertisements"
+    },
+    "/vendedores": {
+      "schema": "Seller",
+      "description": "Collection of sellers"
+    },
+    "/configuracoes": {
+      "schema": "StoreConfig",
+      "description": "Collection of store configurations"
+    },
+    "/fornecedores": {
+      "schema": "Supplier",
+      "description": "Collection of suppliers"
+    },
+    "/pedidos_fornecedor": {
+      "schema": "SupplierOrder",
+      "description": "Collection of supplier orders"
+    },
+    "/compras_estoque": {
+      "schema": "StockPurchase",
+      "description": "Collection of stock purchases"
+    },
+    "/estoque_movimentacoes": {
+      "schema": "StockMovement",
+      "description": "Collection of stock movements"
+    }
+  }
+}

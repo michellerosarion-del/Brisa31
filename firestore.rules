@@ -1,0 +1,131 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: produtos
+// Fields:
+//   - name: string (required)
+//   - price: number (required)
+//   - stock: int (required)
+//   - ... (other optional fields)
+//
+// Collection: clientes
+// Fields:
+//   - name: string (required)
+//   - phone: string
+//   - ...
+//
+// Collection: vendas
+// Fields:
+//   - product_id: string (required)
+//   - quantity: int (required)
+//   - total_value: number (required)
+//   - ...
+//
+// Collection: gastos
+// Fields:
+//   - value: number (required)
+//   - description: string (required)
+//   - ...
+//
+// Collection: vendedores
+// Fields:
+//   - name: string (required)
+//   - ...
+//
+// Collection: configuracoes
+// Fields:
+//   - nome_loja: string
+//   - ...
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "michellerosario.n@gmail.com" ||
+         request.auth.token.email == "michellerosario.n@gmail.com" || // Duplicate for safety or add other admins
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // Collection Rules
+    
+    match /produtos/{productId} {
+      allow read: if true; 
+      allow write: if true; // Relaxed for custom auth
+    }
+
+    match /clientes/{customerId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /vendas/{saleId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /itens_venda/{itemId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /gastos/{expenseId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /usuarios/{userId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /anuncios/{adId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /vendedores/{sellerId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /configuracoes/{configId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /fornecedores/{supplierId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /pedidos_fornecedor/{orderId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /compras_estoque/{purchaseId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /estoque_movimentacoes/{movementId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true; // Relaxed for custom auth
+    }
+  }
+}
