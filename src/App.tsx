@@ -40,6 +40,7 @@ import {
   Trash2,
   Edit,
   CheckCircle2,
+  Check,
   Clock,
   ArrowRight,
   LogOut,
@@ -48,6 +49,8 @@ import {
   Mail,
   Lock,
   User as UserIcon,
+  Eye,
+  EyeOff,
   Camera,
   Download,
   Settings as SettingsIcon,
@@ -228,7 +231,7 @@ type Ad = {
 
 type User = {
   id: string;
-  email: string;
+  login: string;
   name: string;
   role: 'admin' | 'seller';
 };
@@ -704,14 +707,39 @@ const StockHistoryContent = ({ stockMovements, showNotification, showConfirm }: 
 
 const FinanceContent = ({ expenses, ads, orders, handleEdit, handleDeleteExpense, handleDeleteAd, handleDeleteOrder, setModalType, setEditingItem, setIsModalOpen, showNotification, showConfirm }: any) => {
   const [financeTab, setFinanceTab] = useState('todos');
+  const [financeMonth, setFinanceMonth] = useState(new Date().toISOString().slice(0, 7));
 
   const filteredExpenses = expenses.filter((e: any) => {
-    if (financeTab === 'todos') return true;
-    return e.type === financeTab;
+    const matchesTab = financeTab === 'todos' || e.type === financeTab;
+    const matchesMonth = !financeMonth || e.date.startsWith(financeMonth);
+    return matchesTab && matchesMonth;
   });
 
   return (
     <div className="space-y-6">
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Filtro Financeiro</h3>
+              <p className="text-xs text-gray-500">Selecione o mês para visualizar os gastos.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold text-gray-400 uppercase">Mês:</label>
+            <input 
+              type="month" 
+              value={financeMonth}
+              onChange={(e) => setFinanceMonth(e.target.value)}
+              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm font-bold"
+            />
+          </div>
+        </div>
+      </Card>
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-xl w-full md:w-fit overflow-x-auto scrollbar-hide">
           <button 
@@ -822,7 +850,7 @@ const SellersContent = ({ sellers, dashboard, handleEdit, handleDeleteSeller, sh
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl ${
                     s.status === 'ativo' ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
                   }`}>
-                    {s.name.charAt(0)}
+                    {s.name?.charAt(0) || '?'}
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900">{s.name}</h3>
@@ -1458,14 +1486,53 @@ const DashboardContent = ({ dashboard, storeSettings, generatePDF, showNotificat
   );
 };
 
-const ProfitReportContent = ({ dashboard, products, showNotification, showConfirm }: any) => {
+const ProfitReportContent = ({ 
+  products, 
+  customers, 
+  sales, 
+  expenses, 
+  ads, 
+  sellers, 
+  calculateDashboardData,
+  showNotification, 
+  showConfirm 
+}: any) => {
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  
+  const dashboard = useMemo(() => {
+    return calculateDashboardData(products, customers, sales, expenses, ads, sellers, selectedMonth);
+  }, [products, customers, sales, expenses, ads, sellers, selectedMonth, calculateDashboardData]);
+
   if (!dashboard) return null;
 
   return (
     <div className="space-y-6">
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Filtros do Relatório</h3>
+              <p className="text-xs text-gray-500">Selecione o período para análise detalhada.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold text-gray-400 uppercase">Mês de Referência:</label>
+            <input 
+              type="month" 
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm font-bold"
+            />
+          </div>
+        </div>
+      </Card>
+
       <Card>
         <h3 className="font-bold text-gray-900 mb-6 text-lg flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-emerald-500" /> Relatório de Lucro por Produto
+          <DollarSign className="w-5 h-5 text-emerald-500" /> Relatório de Lucro por Produto ({selectedMonth})
         </h3>
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
@@ -1597,7 +1664,7 @@ const CustomersContent = ({ customers, handleEdit, handleDeleteCustomer, storeSe
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm ${
                 c.classification === 'VIP' ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'
               }`}>
-                {c.name.charAt(0)}
+                {c.name?.charAt(0) || '?'}
               </div>
               <div>
                 <h3 className="font-bold text-gray-900">{c.name}</h3>
@@ -1662,7 +1729,7 @@ const CustomersContent = ({ customers, handleEdit, handleDeleteCustomer, storeSe
   );
 };
 
-const ProfileContent = ({ user, showNotification }: any) => {
+const ProfileContent = ({ user, showNotification, setIsChangePasswordModalOpen }: any) => {
   const [loading, setLoading] = useState(false);
 
   const handleUpdateProfile = async (e: any) => {
@@ -1672,17 +1739,12 @@ const ProfileContent = ({ user, showNotification }: any) => {
     const data = Object.fromEntries(formData);
 
     try {
-      // Find the seller document for this user to update their name
-      const sellersSnap = await getDocs(collection(db, 'vendedores'));
-      const sellerDoc = sellersSnap.docs.find(doc => doc.data().email === user.email);
-      
-      if (sellerDoc) {
-        await updateDoc(doc(db, 'vendedores', sellerDoc.id), {
+      if (user) {
+        await updateDoc(doc(db, 'usuarios', user.id), {
           name: data.name
         });
+        showNotification('Perfil atualizado com sucesso!');
       }
-      
-      showNotification('Perfil atualizado com sucesso!');
     } catch (err: any) {
       showNotification(err.message || 'Erro ao atualizar perfil', 'error');
     } finally {
@@ -1699,7 +1761,7 @@ const ProfileContent = ({ user, showNotification }: any) => {
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-900">{user?.name}</h3>
-            <p className="text-gray-500">{user?.email}</p>
+            <p className="text-gray-500">{user?.login}</p>
             <span className="text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full mt-2 inline-block">
               {user?.role === 'admin' ? 'Administrador' : 'Vendedor'}
             </span>
@@ -1713,38 +1775,27 @@ const ProfileContent = ({ user, showNotification }: any) => {
               <input name="name" defaultValue={user?.name} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" required />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-400 uppercase ml-1">E-mail</label>
-              <input name="email" type="email" defaultValue={user?.email} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" required />
+              <label className="text-xs font-bold text-gray-400 uppercase ml-1">Usuário (Login)</label>
+              <input name="login" defaultValue={user?.login} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-400 outline-none cursor-not-allowed" readOnly />
             </div>
           </div>
 
-          <div className="pt-6 border-t border-gray-100">
-            <h4 className="font-bold text-gray-900 mb-4">Alterar Senha</h4>
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-400 uppercase ml-1">Senha Atual</label>
-                <input name="currentPassword" type="password" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nova Senha</label>
-                  <input name="newPassword" type="password" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-400 uppercase ml-1">Confirmar Nova Senha</label>
-                  <input name="confirmPassword" type="password" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                </div>
-              </div>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
+            >
+              {loading ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+            <button 
+              type="button"
+              onClick={() => setIsChangePasswordModalOpen(true)}
+              className="flex-1 bg-white text-indigo-600 border border-indigo-100 py-4 rounded-2xl font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+            >
+              <Lock className="w-4 h-4" /> Alterar Senha
+            </button>
           </div>
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
-          >
-            {loading ? 'Salvando...' : 'Atualizar Perfil'}
-          </button>
         </form>
       </Card>
     </div>
@@ -1769,21 +1820,46 @@ function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+  const [forgotPasswordLogin, setForgotPasswordLogin] = useState('');
+  const [forgotPasswordNewPass, setForgotPasswordNewPass] = useState('');
+  const [forgotPasswordConfirmPass, setForgotPasswordConfirmPass] = useState('');
+  const [isSearchingUser, setIsSearchingUser] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [foundUserForReset, setFoundUserForReset] = useState<any>(null);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user_session');
+    const savedUser = localStorage.getItem('user');
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
-        setToken(localStorage.getItem('token'));
+        setToken(localStorage.getItem('token') || 'custom-token');
       } catch (e) {
-        localStorage.removeItem('user_session');
+        localStorage.removeItem('user');
         localStorage.removeItem('token');
       }
     }
+    
+    // Check if URL is /catalogo
+    if (window.location.pathname === '/catalogo') {
+      setIsPublicCatalog(true);
+    }
+    
     setIsAuthReady(true);
   }, []);
+
+  // Force admin role for the owner email
+  useEffect(() => {
+    if (user && user.login === 'michellerosario.n@gmail.com' && user.role !== 'admin') {
+      const updatedUser = { ...user, role: 'admin' as const };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      // Also update the document in Firestore
+      updateDoc(doc(db, 'usuarios', user.id), { role: 'admin' }).catch(console.error);
+    }
+  }, [user]);
 
   // Data State
   const [products, setProducts] = useState<Product[]>([]);
@@ -1799,8 +1875,15 @@ function AppContent() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [loginRole, setLoginRole] = useState<'admin' | 'vendedor'>('vendedor');
+  const [loginRole, setLoginRole] = useState<'admin' | 'seller'>('seller');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [loginName, setLoginName] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -1834,7 +1917,6 @@ function AppContent() {
     setConfirmModalConfig({ title, message, onConfirm, type });
     setIsConfirmModalOpen(true);
   };
-  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
   const [modalType, setModalType] = useState('');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
@@ -1849,6 +1931,7 @@ function AppContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
   const [salesDateFilter, setSalesDateFilter] = useState('');
+  const [salesMonthFilter, setSalesMonthFilter] = useState('');
   const [salesPaymentFilter, setSalesPaymentFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
@@ -1967,21 +2050,32 @@ function AppContent() {
     showNotification('A restauração automática não está disponível para o Firestore. Entre em contato com o suporte.', 'warning');
   };
 
-  const calculateDashboardData = (products: Product[], customers: Customer[], sales: Sale[], expenses: Expense[], ads: Ad[], sellers: Seller[]): DashboardData => {
+  const calculateDashboardData = (
+    products: Product[], 
+    customers: Customer[], 
+    sales: Sale[], 
+    expenses: Expense[], 
+    ads: Ad[], 
+    sellers: Seller[],
+    targetMonth?: string
+  ): DashboardData => {
     const today = new Date().toISOString().split('T')[0];
-    const currentMonth = new Date().toISOString().slice(0, 7);
+    const currentMonth = targetMonth || new Date().toISOString().slice(0, 7);
     
+    const filteredSales = targetMonth ? sales.filter(s => s.date.startsWith(targetMonth)) : sales;
+    const filteredExpenses = targetMonth ? expenses.filter(e => e.date.startsWith(targetMonth)) : expenses;
+
     const dailySales = sales.filter(s => s.date.startsWith(today));
     const monthlySales = sales.filter(s => s.date.startsWith(currentMonth));
     
-    const dailyRevenue = dailySales.reduce((acc, s) => acc + (s.final_price || 0), 0);
-    const monthlyRevenue = monthlySales.reduce((acc, s) => acc + (s.final_price || 0), 0);
+    const dailyRevenue = dailySales.reduce((acc, s) => acc + toNum(s.final_price), 0);
+    const monthlyRevenue = monthlySales.reduce((acc, s) => acc + toNum(s.final_price), 0);
     
-    const totalProfit = monthlySales.reduce((acc, s) => acc + (s.profit || 0), 0);
-    const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth)).reduce((acc, e) => acc + e.value, 0);
+    const totalProfit = monthlySales.reduce((acc, s) => acc + toNum(s.profit), 0);
+    const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth)).reduce((acc, e) => acc + toNum(e.value), 0);
     const netProfit = totalProfit - monthlyExpenses;
     
-    const lowStock = products.filter(p => p.stock <= p.min_stock);
+    const lowStock = products.filter(p => toNum(p.stock) <= toNum(p.min_stock));
     
     const productSales: Record<string, number> = {};
     const productProfits: Record<string, number> = {};
@@ -1989,7 +2083,7 @@ function AppContent() {
     const sizeSales: Record<string, number> = {};
     const colorSales: Record<string, number> = {};
 
-    sales.forEach(s => {
+    filteredSales.forEach(s => {
       const items = (s.items && s.items.length > 0) ? s.items : [{
         product_id: (s as any).product_id,
         product_name: (s as any).product_name,
@@ -2040,7 +2134,7 @@ function AppContent() {
       
     const ticketMedio = monthlySales.length > 0 ? monthlyRevenue / monthlySales.length : 0;
     
-    const totalInvestment = ads.reduce((acc, a) => acc + a.investment, 0);
+    const totalInvestment = ads.reduce((acc, a) => acc + toNum(a.investment), 0);
     const roi = totalInvestment > 0 ? (totalProfit / totalInvestment) : 0;
     
     const salesByMonth: { month: string; revenue: number; count: number }[] = [];
@@ -2054,7 +2148,7 @@ function AppContent() {
       const mSales = sales.filter(s => s.date.startsWith(m));
       salesByMonth.push({
         month: m,
-        revenue: mSales.reduce((acc, s) => acc + (s.final_price || 0), 0),
+        revenue: mSales.reduce((acc, s) => acc + toNum(s.final_price), 0),
         count: mSales.length
       });
     });
@@ -2067,11 +2161,11 @@ function AppContent() {
 
     const revenueLast7Days = last7Days.map(date => ({
       date,
-      revenue: sales.filter(s => s.date.startsWith(date)).reduce((acc, s) => acc + (s.final_price || 0), 0)
+      revenue: sales.filter(s => s.date.startsWith(date)).reduce((acc, s) => acc + toNum(s.final_price), 0)
     }));
 
     const paymentMethods: Record<string, number> = {};
-    sales.forEach(s => {
+    filteredSales.forEach(s => {
       if (s.payment_method) {
         paymentMethods[s.payment_method] = (paymentMethods[s.payment_method] || 0) + 1;
       }
@@ -2096,12 +2190,12 @@ function AppContent() {
 
     const sellerStats = sellers.map(sel => {
       const selSales = sales.filter(s => s.seller_id && String(s.seller_id) === String(sel.id));
-      const total_sold = selSales.reduce((acc, s) => acc + (s.final_price || 0), 0);
+      const total_sold = selSales.reduce((acc, s) => acc + toNum(s.final_price), 0);
       return {
         id: sel.id,
         name: sel.name,
         total_sold,
-        commission: (total_sold * sel.commission_percentage) / 100,
+        commission: (total_sold * toNum(sel.commission_percentage)) / 100,
         sales_count: selSales.length
       };
     }).sort((a, b) => b.total_sold - a.total_sold);
@@ -2198,7 +2292,7 @@ function AppContent() {
     const unsubscribes: (() => void)[] = [];
 
     const setupListeners = () => {
-      // Products listener (Public or Private)
+      // Public listeners (needed for catalog)
       const unsubProducts = onSnapshot(collection(db, 'produtos'), 
         (snap) => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
@@ -2208,7 +2302,17 @@ function AppContent() {
       );
       unsubscribes.push(unsubProducts);
 
-      if (isPublicCatalog) return;
+      const unsubConfig = onSnapshot(collection(db, 'configuracoes'), 
+        (snap) => {
+          if (!snap.empty) {
+            setStoreSettings({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
+          }
+        },
+        (err) => handleFirestoreError(err, OperationType.LIST, 'configuracoes')
+      );
+      unsubscribes.push(unsubConfig);
+
+      if (isPublicCatalog && !token) return;
 
       // Private listeners
       const collections = [
@@ -2222,11 +2326,11 @@ function AppContent() {
             setSellers(data);
           } 
         },
-        { name: 'configuracoes', setter: (data: any[]) => data.length > 0 && setStoreSettings(data[0]) },
         { name: 'fornecedores', setter: setSuppliers },
         { name: 'pedidos_fornecedor', setter: setOrders },
         { name: 'compras_estoque', setter: setPurchaseHistory },
-        { name: 'estoque_movimentacoes', setter: setStockMovements }
+        { name: 'estoque_movimentacoes', setter: setStockMovements },
+        { name: 'usuarios', setter: setSystemUsers }
       ];
 
       collections.forEach(col => {
@@ -2245,17 +2349,6 @@ function AppContent() {
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, [isAuthReady, isPublicCatalog, token]);
-
-  // Sync user role with sellers data
-  useEffect(() => {
-    if (user && sellers.length > 0) {
-      const seller = sellers.find(s => s.email === user.email);
-      const newRole = (user.email === 'michellerosario.n@gmail.com' || seller?.role === 'admin') ? 'admin' : 'seller';
-      if (user.role !== newRole) {
-        setUser(prev => prev ? { ...prev, role: newRole } : null);
-      }
-    }
-  }, [user?.email, user?.role, sellers]);
 
   // Update dashboard when data changes
   useEffect(() => {
@@ -2290,33 +2383,188 @@ function AppContent() {
     // Keeping the function signature for compatibility with existing calls
   };
 
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    setIsLoggingIn(true);
     try {
-      const q = query(collection(db, 'usuarios'), where('usuario', '==', loginEmail), where('senha', '==', loginPassword));
+      const email = loginEmail.trim().toLowerCase();
+      const password = loginPassword.trim();
+      
+      console.log('Attempting login for:', email);
+
+      const q = query(collection(db, 'usuarios'), where('login', '==', email), where('senha', '==', password));
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
         const userData = querySnapshot.docs[0].data();
+        let role: 'admin' | 'seller' = userData.role === 'admin' ? 'admin' : 'seller';
+        
+        // Force admin role for the owner email
+        if (email === 'michellerosario.n@gmail.com') {
+          role = 'admin';
+          // Also update the document if it wasn't admin
+          if (userData.role !== 'admin') {
+            await updateDoc(doc(db, 'usuarios', querySnapshot.docs[0].id), { role: 'admin' });
+          }
+        }
+
         const loggedUser: User = {
           id: querySnapshot.docs[0].id,
-          email: userData.usuario,
-          name: userData.usuario,
-          role: userData.tipo === 'admin' ? 'admin' : 'seller'
+          login: userData.login,
+          name: userData.name || userData.login,
+          role: role
         };
         setUser(loggedUser);
         setToken('custom-token');
-        localStorage.setItem('user_session', JSON.stringify(loggedUser));
+        localStorage.setItem('user', JSON.stringify(loggedUser));
         localStorage.setItem('token', 'custom-token');
         showNotification('Login realizado com sucesso!');
+      } else if (email === 'michellerosario.n@gmail.com' && password === '596261') {
+        // Special case for the owner: ensure the account exists and has the correct password
+        const ownerQuery = query(collection(db, 'usuarios'), where('login', '==', email));
+        const ownerSnapshot = await getDocs(ownerQuery);
+        
+        let loggedUser: User;
+        
+        if (ownerSnapshot.empty) {
+          // Create the owner account if it doesn't exist
+          const newUser = {
+            login: email,
+            senha: password,
+            name: 'Michelle Rosario',
+            role: 'admin'
+          };
+          const docRef = await addDoc(collection(db, 'usuarios'), newUser);
+          loggedUser = {
+            id: docRef.id,
+            login: newUser.login,
+            name: newUser.name,
+            role: 'admin'
+          };
+          showNotification('Conta de administrador criada!');
+        } else {
+          // Update the owner password/role if it was different
+          const ownerDoc = ownerSnapshot.docs[0];
+          await updateDoc(doc(db, 'usuarios', ownerDoc.id), { senha: password, role: 'admin' });
+          const userData = ownerDoc.data();
+          loggedUser = {
+            id: ownerDoc.id,
+            login: userData.login,
+            name: userData.name || userData.login,
+            role: 'admin'
+          };
+          showNotification('Acesso de administrador restaurado!');
+        }
+        
+        setUser(loggedUser);
+        setToken('custom-token');
+        localStorage.setItem('user', JSON.stringify(loggedUser));
+        localStorage.setItem('token', 'custom-token');
       } else {
         setAuthError('Usuário ou senha inválidos');
         showNotification('Usuário ou senha inválidos', 'error');
       }
     } catch (err: any) {
-      setAuthError('Erro ao realizar login');
+      console.error('Login error:', err);
+      // Use the helper to log more details if it's a permission error
+      if (err.message && err.message.includes('permission')) {
+        try {
+          handleFirestoreError(err, OperationType.LIST, 'usuarios');
+        } catch (e) {
+          // handleFirestoreError throws, which is fine
+        }
+        setAuthError('Erro de permissão no banco de dados. Contate o administrador.');
+      } else {
+        setAuthError('Erro ao realizar login. Verifique sua conexão.');
+      }
       showNotification('Erro ao realizar login', 'error');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleSearchUserForReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const loginToSearch = forgotPasswordLogin.trim().toLowerCase();
+    if (!loginToSearch) {
+      showNotification('Por favor, informe seu usuário ou e-mail.', 'error');
+      return;
+    }
+    setIsSearchingUser(true);
+    try {
+      console.log('Searching for user:', loginToSearch);
+      const q = query(collection(db, 'usuarios'), where('login', '==', loginToSearch));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        const userData = snap.docs[0].data();
+        setFoundUserForReset({ id: snap.docs[0].id, ...userData });
+        showNotification(`Usuário ${userData.name || userData.login} encontrado!`);
+      } else {
+        // Tentar buscar pelo nome também, caso o usuário tenha esquecido o login
+        const qName = query(collection(db, 'usuarios'), where('name', '==', forgotPasswordLogin.trim()));
+        const snapName = await getDocs(qName);
+        
+        if (!snapName.empty) {
+          const userData = snapName.docs[0].data();
+          setFoundUserForReset({ id: snapName.docs[0].id, ...userData });
+          showNotification(`Usuário ${userData.name || userData.login} encontrado!`);
+        } else {
+          showNotification('Usuário não encontrado. Verifique o nome digitado.', 'error');
+        }
+      }
+    } catch (err: any) {
+      console.error('Error searching user:', err);
+      showNotification('Erro ao buscar usuário. Tente novamente.', 'error');
+      try {
+        handleFirestoreError(err, OperationType.GET, 'usuarios');
+      } catch (e) {}
+    } finally {
+      setIsSearchingUser(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!foundUserForReset) return;
+
+    if (forgotPasswordNewPass !== forgotPasswordConfirmPass) {
+      showNotification('As senhas não coincidem.', 'error');
+      return;
+    }
+    if (forgotPasswordNewPass.length < 4) {
+      showNotification('A senha deve ter pelo menos 4 caracteres.', 'error');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      console.log('Resetting password for user ID:', foundUserForReset.id);
+      await updateDoc(doc(db, 'usuarios', foundUserForReset.id), {
+        senha: forgotPasswordNewPass
+      });
+      
+      showNotification('Senha redefinida com sucesso! Agora você pode entrar.');
+      setIsForgotPasswordModalOpen(false);
+      setFoundUserForReset(null);
+      setForgotPasswordLogin('');
+      setForgotPasswordNewPass('');
+      setForgotPasswordConfirmPass('');
+      setShowResetPassword(false);
+      
+      // Limpar campos de login para forçar o usuário a digitar a nova senha
+      setLoginPassword('');
+    } catch (err: any) {
+      console.error('Error resetting password:', err);
+      showNotification('Erro ao redefinir senha. Tente novamente.', 'error');
+      try {
+        handleFirestoreError(err, OperationType.UPDATE, `usuarios/${foundUserForReset.id}`);
+      } catch (e) {}
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -2324,8 +2572,11 @@ function AppContent() {
     e.preventDefault();
     setAuthError(null);
     try {
+      const email = loginEmail.trim().toLowerCase();
+      const password = loginPassword.trim();
+      
       // Check if user already exists
-      const q = query(collection(db, 'usuarios'), where('usuario', '==', loginEmail));
+      const q = query(collection(db, 'usuarios'), where('login', '==', email));
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
@@ -2335,37 +2586,58 @@ function AppContent() {
       }
 
       const newUser = {
-        usuario: loginEmail,
-        senha: loginPassword,
-        tipo: loginRole
+        login: email,
+        senha: password,
+        name: loginName.trim() || email,
+        role: loginRole
       };
       
       const docRef = await addDoc(collection(db, 'usuarios'), newUser);
       
-      const loggedUser: User = {
-        id: docRef.id,
-        email: newUser.usuario,
-        name: newUser.usuario,
-        role: newUser.tipo === 'admin' ? 'admin' : 'seller'
-      };
-      
-      setUser(loggedUser);
-      setToken('custom-token');
-      localStorage.setItem('user_session', JSON.stringify(loggedUser));
-      localStorage.setItem('token', 'custom-token');
-      showNotification('Conta criada com sucesso!');
+      if (systemUsers.length === 0) {
+        const loggedUser: User = {
+          id: docRef.id,
+          login: newUser.login,
+          name: newUser.name,
+          role: newUser.role === 'admin' ? 'admin' : 'seller'
+        };
+        
+        setUser(loggedUser);
+        setToken('custom-token');
+        localStorage.setItem('user', JSON.stringify(loggedUser));
+        localStorage.setItem('token', 'custom-token');
+        showNotification('Primeiro administrador criado com sucesso!');
+      } else {
+        showNotification('Usuário cadastrado com sucesso!');
+        setIsModalOpen(false);
+        setLoginEmail('');
+        setLoginPassword('');
+        setLoginName('');
+      }
     } catch (err: any) {
-      setAuthError('Erro ao criar conta');
-      showNotification('Erro ao criar conta', 'error');
+      setAuthError('Erro ao cadastrar usuário');
+      showNotification('Erro ao cadastrar usuário', 'error');
     }
   };
 
-  const handleLogout = async () => {
+  const handleForgotPassword = () => {
+    // Se o usuário já digitou algo no campo de login, usamos isso como sugestão
+    const login = loginEmail.trim().toLowerCase();
+    setForgotPasswordLogin(login);
+    setForgotPasswordNewPass('');
+    setForgotPasswordConfirmPass('');
+    setFoundUserForReset(null);
+    setShowResetPassword(false);
+    setIsForgotPasswordModalOpen(true);
+  };
+
+  const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('user_session');
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
-    setActiveTab('dashboard');
+    setActiveTab('administracao');
+    showNotification('Sessão encerrada.');
   };
 
   const generatePDF = (type: string) => {
@@ -2804,29 +3076,6 @@ function AppContent() {
     }
   };
 
-  const handleForgotPassword = async (e: any) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData);
-    
-    if (data.newPassword !== data.confirmPassword) {
-      showNotification('As senhas não coincidem', 'error');
-      return;
-    }
-
-    try {
-      await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      showNotification('Senha redefinida com sucesso!');
-      setIsForgotPasswordModalOpen(false);
-    } catch (err: any) {
-      showNotification(err.message, 'error');
-    }
-  };
-
   const handleSaveSettings = async (e: any) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -2879,6 +3128,94 @@ function AppContent() {
         }
       }
     );
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    showConfirm(
+      'Excluir Usuário',
+      'Tem certeza que deseja excluir este usuário?',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'usuarios', id));
+          showNotification('Usuário excluído com sucesso!');
+        } catch (error) {
+          showNotification('Erro ao excluir usuário', 'error');
+        }
+      }
+    );
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) {
+      showNotification('As senhas não coincidem', 'error');
+      return;
+    }
+    if (newPassword.length < 4) {
+      showNotification('A senha deve ter pelo menos 4 caracteres', 'error');
+      return;
+    }
+
+    try {
+      if (user) {
+        await updateDoc(doc(db, 'usuarios', user.id), {
+          senha: newPassword
+        });
+        showNotification('Senha alterada com sucesso!');
+        setIsChangePasswordModalOpen(false);
+        setNewPassword('');
+        setConfirmNewPassword('');
+      }
+    } catch (err) {
+      showNotification('Erro ao alterar senha', 'error');
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const login = (formData.get('login') as string).trim().toLowerCase();
+    const senha = (formData.get('senha') as string).trim();
+    const name = (formData.get('name') as string).trim() || login;
+    const role = formData.get('role') as 'admin' | 'seller';
+
+    const userData = {
+      name,
+      login,
+      senha,
+      role
+    };
+
+    try {
+      if (editingItem) {
+        // Check if login is used by another user
+        const q = query(collection(db, 'usuarios'), where('login', '==', login));
+        const querySnapshot = await getDocs(q);
+        const otherUsers = querySnapshot.docs.filter(d => d.id !== editingItem.id);
+        
+        if (otherUsers.length > 0) {
+          showNotification('Este login já está em uso por outro usuário', 'error');
+          return;
+        }
+
+        await updateDoc(doc(db, 'usuarios', editingItem.id), userData);
+        showNotification('Usuário atualizado com sucesso!');
+      } else {
+        // Check if login already exists
+        const q = query(collection(db, 'usuarios'), where('login', '==', login));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          showNotification('Este login já está em uso', 'error');
+          return;
+        }
+        await addDoc(collection(db, 'usuarios'), userData);
+        showNotification('Usuário cadastrado com sucesso!');
+      }
+      setIsModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      showNotification('Erro ao salvar usuário', 'error');
+    }
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -3061,6 +3398,7 @@ function AppContent() {
     { id: 'stock_history', label: 'Histórico Estoque', icon: Clock, adminOnly: true },
     { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'vendedores', label: 'Vendedores', icon: Briefcase, adminOnly: true },
+    { id: 'usuarios', label: 'Usuários', icon: UserIcon, adminOnly: true },
     { id: 'financeiro', label: 'Financeiro', icon: Receipt, adminOnly: true },
     { id: 'relatorios', label: 'Relatórios', icon: BarChart3, adminOnly: true },
     { id: 'precificacao', label: 'Precificação', icon: DollarSign, adminOnly: true },
@@ -3087,6 +3425,23 @@ function AppContent() {
           </div>
 
           <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
+            {isRegistering && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nome Completo</label>
+                <div className="relative">
+                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input 
+                    type="text" 
+                    value={loginName}
+                    onChange={(e) => setLoginName(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    placeholder="Nome completo"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase ml-1">Usuário</label>
               <div className="relative">
@@ -3107,13 +3462,20 @@ function AppContent() {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input 
-                  type="password" 
+                  type={showPassword ? "text" : "password"}
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   placeholder="••••••••"
                   required
                 />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
@@ -3128,7 +3490,7 @@ function AppContent() {
                     className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none bg-white"
                     required
                   >
-                    <option value="vendedor">Vendedor</option>
+                    <option value="seller">Vendedor</option>
                     <option value="admin">Administrador</option>
                   </select>
                 </div>
@@ -3137,21 +3499,42 @@ function AppContent() {
 
             <button 
               type="submit"
-              className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3"
+              disabled={isLoggingIn}
+              className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
-              {isRegistering ? 'Criar Conta' : 'Entrar no Sistema'}
-              <ArrowRight className="w-5 h-5" />
+              {isLoggingIn ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  {isRegistering ? 'Criar Primeiro Administrador' : 'Entrar no Sistema'}
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </button>
 
-            <div className="text-center">
-              <button 
-                type="button"
-                onClick={() => setIsRegistering(!isRegistering)}
-                className="text-sm text-indigo-600 font-bold hover:underline"
-              >
-                {isRegistering ? 'Já tenho uma conta' : 'Criar nova conta'}
-              </button>
-            </div>
+            {!isRegistering && (
+              <div className="text-center mt-4">
+                <button 
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center justify-center gap-2 mx-auto"
+                >
+                  <AlertCircle className="w-4 h-4" /> Esqueci minha senha
+                </button>
+              </div>
+            )}
+
+            {systemUsers.length === 0 && (
+              <div className="text-center">
+                <button 
+                  type="button"
+                  onClick={() => setIsRegistering(!isRegistering)}
+                  className="text-sm text-indigo-600 font-bold hover:underline"
+                >
+                  {isRegistering ? 'Voltar para Login' : 'Criar Primeiro Administrador'}
+                </button>
+              </div>
+            )}
 
             {authError && (
               <div className="p-3 bg-rose-50 text-rose-600 text-sm rounded-xl flex items-center gap-2 border border-rose-100">
@@ -3193,12 +3576,21 @@ function AppContent() {
                   <Download className="w-4 h-4" /> <span className="hidden sm:inline">Instalar App</span>
                 </button>
               )}
-              <button 
-                onClick={() => setIsPublicCatalog(false)}
-                className="text-sm text-indigo-600 font-medium flex items-center gap-1 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <ArrowRight className="w-4 h-4 rotate-180" /> <span className="hidden sm:inline">Painel Administrativo</span>
-              </button>
+              {token ? (
+                <button 
+                  onClick={() => setIsPublicCatalog(false)}
+                  className="text-sm text-indigo-600 font-medium flex items-center gap-1 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <ArrowRight className="w-4 h-4 rotate-180" /> <span className="hidden sm:inline">Painel Administrativo</span>
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setIsPublicCatalog(false)}
+                  className="text-sm text-gray-500 font-medium flex items-center gap-1 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <LogIn className="w-4 h-4" /> <span className="hidden sm:inline">Entrar</span>
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -3232,31 +3624,6 @@ function AppContent() {
             <p className="text-gray-400 text-sm">© {new Date().getFullYear()} {storeSettings.nome_loja} - Todos os direitos reservados.</p>
           </div>
         </footer>
-
-        <Modal 
-          isOpen={isForgotPasswordModalOpen} 
-          onClose={() => setIsForgotPasswordModalOpen(false)} 
-          title="Redefinir Senha"
-        >
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            <p className="text-sm text-gray-500 mb-4">Informe seu e-mail e a nova senha desejada.</p>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase">E-mail</label>
-              <input name="email" type="email" required className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase">Nova Senha</label>
-              <input name="newPassword" type="password" required className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase">Confirmar Nova Senha</label>
-              <input name="confirmPassword" type="password" required className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
-            <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all">
-              Redefinir Senha
-            </button>
-          </form>
-        </Modal>
       </div>
     );
   }
@@ -3357,7 +3724,7 @@ function AppContent() {
           {user && (
             <div className="flex items-center gap-3 px-2 mb-4">
               <div className="w-10 h-10 bg-white rounded-full border border-gray-200 flex items-center justify-center text-indigo-600 font-black shadow-sm">
-                {user.name.charAt(0)}
+                {user.name?.charAt(0) || '?'}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-gray-900 truncate">{user.name}</p>
@@ -3400,7 +3767,7 @@ function AppContent() {
               <h2 className="text-2xl md:text-3xl font-black text-gray-900 capitalize tracking-tight">{activeTab}</h2>
               <p className="text-gray-500 text-xs md:text-sm font-medium">Gerencie sua loja de forma simples e eficiente.</p>
             </div>
-            {['produtos', 'vendas', 'clientes', 'fornecedores', 'gastos', 'anuncios', 'vendedores', 'financeiro'].includes(activeTab) && (
+            {['produtos', 'vendas', 'clientes', 'fornecedores', 'gastos', 'anuncios', 'vendedores', 'financeiro', 'usuarios'].includes(activeTab) && (
               <button 
                 onClick={() => {
                   setModalType(activeTab === 'financeiro' ? 'gastos' : activeTab);
@@ -3419,6 +3786,7 @@ function AppContent() {
                  activeTab === 'fornecedores' ? 'Novo Fornecedor' :
                  activeTab === 'gastos' ? 'Novo Gasto' :
                  activeTab === 'anuncios' ? 'Novo Anúncio' :
+                 activeTab === 'usuarios' ? 'Novo Usuário' :
                  `Adicionar ${activeTab.slice(0, -1)}`}
               </button>
             )}
@@ -3472,15 +3840,86 @@ function AppContent() {
             />
           )}
 
+          {activeTab === 'usuarios' && (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-bold text-gray-900">Gerenciamento de Usuários</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left border-b border-gray-100">
+                        <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nome</th>
+                        <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Login</th>
+                        <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Função</th>
+                        <th className="pb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {systemUsers.map(u => (
+                        <tr key={u.id} className="group hover:bg-gray-50/50 transition-colors">
+                          <td className="py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                {u.name?.charAt(0) || '?'}
+                              </div>
+                              <span className="font-bold text-gray-900">{u.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 text-sm text-gray-500">{u.login}</td>
+                          <td className="py-4">
+                            <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                              u.role === 'admin' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'
+                            }`}>
+                              {u.role === 'admin' ? 'Administrador' : 'Vendedor'}
+                            </span>
+                          </td>
+                          <td className="py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => handleEdit('usuarios', u)}
+                                className="p-2 text-gray-400 hover:text-indigo-600 transition-colors"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteUser(u.id)}
+                                className="p-2 text-gray-400 hover:text-rose-600 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
+
           {activeTab === 'perfil' && (
             <ProfileContent 
               user={user}
               showNotification={showNotification}
+              setIsChangePasswordModalOpen={setIsChangePasswordModalOpen}
             />
           )}
 
-          {activeTab === 'relatorios' && dashboard && (
-            <ProfitReportContent dashboard={dashboard} products={products} showNotification={showNotification} showConfirm={showConfirm} />
+          {activeTab === 'relatorios' && (
+            <ProfitReportContent 
+              products={products} 
+              customers={customers}
+              sales={sales}
+              expenses={expenses}
+              ads={ads}
+              sellers={sellers}
+              calculateDashboardData={calculateDashboardData}
+              showNotification={showNotification} 
+              showConfirm={showConfirm} 
+            />
           )}
 
           {activeTab === 'catalogo' && (
@@ -3727,10 +4166,22 @@ function AppContent() {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                     <input 
+                      type="month" 
+                      className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm font-bold"
+                      value={salesMonthFilter}
+                      onChange={(e) => {
+                        setSalesMonthFilter(e.target.value);
+                        if (e.target.value) setSalesDateFilter('');
+                      }}
+                    />
+                    <input 
                       type="date" 
                       className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                       value={salesDateFilter}
-                      onChange={(e) => setSalesDateFilter(e.target.value)}
+                      onChange={(e) => {
+                        setSalesDateFilter(e.target.value);
+                        if (e.target.value) setSalesMonthFilter('');
+                      }}
                     />
                     <select 
                       className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
@@ -3770,8 +4221,9 @@ function AppContent() {
                                             s.seller_name?.toLowerCase().includes(salesSearchTerm.toLowerCase()) ||
                                             s.payment_method?.toLowerCase().includes(salesSearchTerm.toLowerCase());
                         const matchesDate = !salesDateFilter || s.date.includes(salesDateFilter);
+                        const matchesMonth = !salesMonthFilter || s.date.startsWith(salesMonthFilter);
                         const matchesPayment = !salesPaymentFilter || s.payment_method === salesPaymentFilter;
-                        return matchesSearch && matchesDate && matchesPayment;
+                        return matchesSearch && matchesDate && matchesMonth && matchesPayment;
                       }).map(s => (
                         <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-6 py-4 text-sm text-gray-600">{new Date(s.date).toLocaleDateString('pt-BR')}</td>
@@ -4155,6 +4607,49 @@ function AppContent() {
         }} 
         title={`${editingItem ? 'Editar' : 'Adicionar'} ${modalType.slice(0, -1)}`}
       >
+        {modalType === 'usuarios' && (
+          <form onSubmit={handleAddUser} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nome Completo</label>
+              <input name="name" defaultValue={editingItem?.name} placeholder="Ex: Michele Rosario" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" required />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-400 uppercase ml-1">Login</label>
+              <input name="login" defaultValue={editingItem?.login} placeholder="Ex: michelerosario" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" required />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-400 uppercase ml-1">Senha</label>
+              <div className="relative">
+                <input 
+                  name="senha" 
+                  type={showPassword ? "text" : "password"}
+                  defaultValue={editingItem?.senha} 
+                  placeholder="••••••••" 
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
+                  required 
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-400 uppercase ml-1">Função</label>
+              <select name="role" defaultValue={editingItem?.role || 'seller'} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                <option value="seller">Vendedor</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
+              {editingItem ? 'Salvar Alterações' : 'Cadastrar Usuário'}
+            </button>
+          </form>
+        )}
+
         {modalType === 'produtos' && (
           <form onSubmit={handleAddProduct} className="space-y-4">
             <div className="space-y-1">
@@ -4706,6 +5201,176 @@ function AppContent() {
           </form>
         )}
       </Modal>
+
+      <Modal 
+        isOpen={isChangePasswordModalOpen} 
+        onClose={() => setIsChangePasswordModalOpen(false)} 
+        title="Alterar Minha Senha"
+      >
+        <form onSubmit={handleUpdatePassword} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nova Senha</label>
+            <div className="relative">
+              <input 
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                placeholder="Mínimo 4 caracteres"
+                required
+              />
+              <button 
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-400 uppercase ml-1">Confirmar Nova Senha</label>
+            <input 
+              type="password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="Repita a nova senha"
+              required
+            />
+          </div>
+          <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
+            Atualizar Senha
+          </button>
+        </form>
+      </Modal>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {isForgotPasswordModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100"
+            >
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 className="text-xl font-black text-gray-900 tracking-tight">Esqueci minha senha</h3>
+                <button 
+                  onClick={() => {
+                    setIsForgotPasswordModalOpen(false);
+                    setFoundUserForReset(null);
+                    setForgotPasswordLogin('');
+                  }}
+                  className="p-2 hover:bg-white rounded-xl transition-colors text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {!foundUserForReset ? (
+                  <form onSubmit={handleSearchUserForReset} className="space-y-4">
+                    <p className="text-sm text-gray-500 font-medium">
+                      Informe seu nome de usuário ou e-mail para buscar sua conta.
+                    </p>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-400 uppercase ml-1">Usuário ou E-mail</label>
+                      <div className="relative">
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input 
+                          type="text" 
+                          value={forgotPasswordLogin}
+                          onChange={(e) => setForgotPasswordLogin(e.target.value)}
+                          className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          placeholder="Ex: michellerosario.n@gmail.com"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      type="submit"
+                      disabled={isSearchingUser}
+                      className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                      {isSearchingUser ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>Continuar <ArrowRight className="w-5 h-5" /></>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 mb-4">
+                      <p className="text-sm text-indigo-700 font-bold">Usuário encontrado: {foundUserForReset.name || foundUserForReset.login}</p>
+                      <p className="text-xs text-indigo-600 mt-1">Defina sua nova senha abaixo.</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nova Senha</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input 
+                          type={showResetPassword ? "text" : "password"} 
+                          value={forgotPasswordNewPass}
+                          onChange={(e) => setForgotPasswordNewPass(e.target.value)}
+                          className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          placeholder="Mínimo 4 caracteres"
+                          required
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowResetPassword(!showResetPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                        >
+                          {showResetPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-400 uppercase ml-1">Confirmar Nova Senha</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input 
+                          type={showResetPassword ? "text" : "password"} 
+                          value={forgotPasswordConfirmPass}
+                          onChange={(e) => setForgotPasswordConfirmPass(e.target.value)}
+                          className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          placeholder="Repita a nova senha"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={isResettingPassword}
+                      className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                      {isResettingPassword ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>Redefinir Senha <Check className="w-5 h-5" /></>
+                      )}
+                    </button>
+                    
+                    <button 
+                      type="button"
+                      onClick={() => setFoundUserForReset(null)}
+                      className="w-full text-sm text-gray-500 font-bold hover:underline"
+                    >
+                      Voltar para busca
+                    </button>
+                  </form>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

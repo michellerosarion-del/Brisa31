@@ -2,41 +2,36 @@
 // Assumed Data Model
 // ===============================================================
 //
+// Collection: usuarios
+// Fields:
+//   - login: string (required, lowercase, trimmed)
+//   - senha: string (required, trimmed)
+//   - name: string (required)
+//   - role: string (admin/seller)
+//
 // Collection: produtos
 // Fields:
 //   - name: string (required)
 //   - price: number (required)
-//   - stock: int (required)
-//   - ... (other optional fields)
-//
-// Collection: clientes
-// Fields:
-//   - name: string (required)
-//   - phone: string
-//   - ...
+//   - stock: number (required)
+//   - cost: number
+//   - brand: string
+//   - category: string
 //
 // Collection: vendas
 // Fields:
-//   - product_id: string (required)
-//   - quantity: int (required)
-//   - total_value: number (required)
-//   - ...
+//   - items: list (required)
+//   - total: number (required)
+//   - date: timestamp/string (required)
+//   - seller_id: string
+//   - customer_id: string
 //
 // Collection: gastos
 // Fields:
-//   - value: number (required)
 //   - description: string (required)
-//   - ...
-//
-// Collection: vendedores
-// Fields:
-//   - name: string (required)
-//   - ...
-//
-// Collection: configuracoes
-// Fields:
-//   - nome_loja: string
-//   - ...
+//   - value: number (required)
+//   - date: string (required)
+//   - category: string
 //
 // ===============================================================
 
@@ -50,82 +45,93 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.email == "michellerosario.n@gmail.com" ||
-         request.auth.token.email == "michellerosario.n@gmail.com" || // Duplicate for safety or add other admins
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin');
+      return isAuthenticated() && (
+        (request.auth.token.email == "michellerosario.n@gmail.com" && request.auth.token.email_verified == true) ||
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return data.login is string && data.login.size() > 0 &&
+             data.senha is string && data.senha.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.role in ['admin', 'seller', 'vendedor'];
     }
 
     // Collection Rules
     
+    match /usuarios/{userId} {
+      // Allow all operations for the custom login system
+      allow read, write: if true;
+    }
+
     match /produtos/{productId} {
-      allow read: if true; 
-      allow write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /clientes/{customerId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if true; // Sellers can add customers
     }
 
     match /vendas/{saleId} {
-      allow read, write: if true; // Relaxed for custom auth
-    }
-
-    match /itens_venda/{itemId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow create: if true; // Sellers can create sales
+      allow update, delete: if isAdmin();
     }
 
     match /gastos/{expenseId} {
-      allow read, write: if true; // Relaxed for custom auth
-    }
-
-    match /usuarios/{userId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /anuncios/{adId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /vendedores/{sellerId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /configuracoes/{configId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /fornecedores/{supplierId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /pedidos_fornecedor/{orderId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /compras_estoque/{purchaseId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /estoque_movimentacoes/{movementId} {
-      allow read, write: if true; // Relaxed for custom auth
+      allow read: if true;
+      allow write: if true; // Sellers record movements on sale
     }
 
     match /test/connection {
       allow read: if true;
-    }
-
-    match /users/{userId} {
-      allow read, write: if true; // Relaxed for custom auth
     }
   }
 }

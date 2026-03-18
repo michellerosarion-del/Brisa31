@@ -135,12 +135,12 @@
       "description": "System users",
       "type": "object",
       "properties": {
-        "email": { "type": "string" },
+        "login": { "type": "string" },
+        "senha": { "type": "string" },
         "name": { "type": "string" },
-        "role": { "type": "string" },
-        "uid": { "type": "string" }
+        "role": { "type": "string", "enum": ["admin", "seller"] }
       },
-      "required": ["email", "uid"]
+      "required": ["login", "senha", "name", "role"]
     },
     "Ad": {
       "title": "Ad",
