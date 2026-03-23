@@ -44,20 +44,33 @@
       "properties": {
         "date": { "type": "string", "format": "date-time" },
         "customer_id": { "type": "string" },
-        "product_id": { "type": "string" },
-        "quantity": { "type": "integer" },
-        "unit_price": { "type": "number" },
-        "total_value": { "type": "number" },
-        "size": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "product_id": { "type": "string" },
+              "product_name": { "type": "string" },
+              "quantity": { "type": "integer" },
+              "unit_price": { "type": "number" },
+              "total_price": { "type": "number" },
+              "cost": { "type": "number" },
+              "size": { "type": "string" },
+              "color": { "type": "string" }
+            }
+          }
+        },
+        "total_value": { "type": "number", "description": "Sum of original prices before any adjustments" },
         "payment_method": { "type": "string" },
         "seller_id": { "type": "string" },
         "discount_value": { "type": "number" },
         "discount_type": { "type": "string" },
-        "final_price": { "type": "number" },
-        "profit": { "type": "number" },
+        "final_price": { "type": "number", "description": "Actual amount paid by customer" },
+        "total_cost": { "type": "number", "description": "Sum of costs of all items" },
+        "profit": { "type": "number", "description": "final_price - total_cost" },
         "sale_group_id": { "type": "string" }
       },
-      "required": ["product_id", "quantity", "total_value"]
+      "required": ["items", "final_price", "date"]
     },
     "Expense": {
       "title": "Expense",

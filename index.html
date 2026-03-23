@@ -2,14 +2,50 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brisa 31</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Brisa 31 | Moda Masculina</title>
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#4f46e5" />
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/192/3534/3534312.png" />
+    <meta name="theme-color" content="#15192b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Brisa 31" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
   </head>
   <body>
     <div id="root"></div>
+    <div id="storage-blocked-fallback" style="display: none; position: fixed; inset: 0; background: #15192b; color: #f5e6d3; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; font-family: sans-serif;">
+      <div style="width: 4rem; height: 4rem; border: 4px solid #f5e6d3; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 2rem;"></div>
+      <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Brisa 31</h2>
+      <p style="font-size: 0.875rem; color: rgba(245, 230, 211, 0.6); max-width: 20rem; margin-bottom: 2rem; line-height: 1.5;">
+        Seu navegador está bloqueando o armazenamento local, o que impede o carregamento correto. 
+        Para continuar, abra o aplicativo em uma nova aba.
+      </p>
+      <a href="" id="open-new-tab-link" style="background: #f5e6d3; color: #15192b; padding: 1rem 2rem; border-radius: 0.75rem; text-decoration: none; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">
+        Abrir em Nova Aba
+      </a>
+      <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+    </div>
+    <script>
+      (function() {
+        var isStorageBlocked = false;
+        try {
+          localStorage.setItem('test', '1');
+          localStorage.removeItem('test');
+        } catch (e) {
+          isStorageBlocked = true;
+        }
+        
+        if (isStorageBlocked) {
+          document.getElementById('storage-blocked-fallback').style.display = 'flex';
+          document.getElementById('open-new-tab-link').href = window.location.href;
+        } else {
+          document.getElementById('storage-blocked-fallback').style.display = 'none';
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {

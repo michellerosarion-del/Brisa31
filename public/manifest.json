@@ -4,8 +4,8 @@
   "description": "Sistema de gestão completo para lojas de roupas masculinas.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "background_color": "#15192b",
+  "theme_color": "#15192b",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3534/3534312.png",

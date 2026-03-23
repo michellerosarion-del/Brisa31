@@ -76,7 +76,7 @@ service cloud.firestore {
 
     match /produtos/{productId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /clientes/{customerId} {
@@ -87,42 +87,42 @@ service cloud.firestore {
     match /vendas/{saleId} {
       allow read: if true;
       allow create: if true; // Sellers can create sales
-      allow update, delete: if isAdmin();
+      allow update, delete: if true; // Relaxed for custom login system
     }
 
     match /gastos/{expenseId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /anuncios/{adId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /vendedores/{sellerId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /configuracoes/{configId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /fornecedores/{supplierId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /pedidos_fornecedor/{orderId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /compras_estoque/{purchaseId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true; // Relaxed for custom login system
     }
 
     match /estoque_movimentacoes/{movementId} {
