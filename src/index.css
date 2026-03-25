@@ -17,7 +17,7 @@
 
 @layer base {
   body {
-    @apply font-sans text-midnight bg-[#fcfcfc];
+    @apply font-sans text-midnight bg-[#fcfcfc] text-sm md:text-[15px] leading-relaxed;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -27,23 +27,23 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-midnight text-champagne hover:bg-black transition-all duration-500 rounded-xl px-5 py-3 font-bold shadow-xl shadow-midnight/10 active:scale-[0.98] flex items-center justify-center gap-2;
+    @apply bg-midnight text-champagne hover:bg-black transition-all duration-500 rounded-xl px-6 py-3.5 md:px-5 md:py-3 font-bold shadow-xl shadow-midnight/10 active:scale-[0.98] flex items-center justify-center gap-2 min-h-[48px] md:min-h-[40px];
   }
   
   .btn-secondary {
-    @apply bg-champagne text-midnight hover:bg-champagne-dark transition-all duration-500 rounded-xl px-5 py-3 font-bold shadow-xl shadow-champagne/10 active:scale-[0.98] flex items-center justify-center gap-2;
+    @apply bg-champagne text-midnight hover:bg-champagne-dark transition-all duration-500 rounded-xl px-6 py-3.5 md:px-5 md:py-3 font-bold shadow-xl shadow-champagne/10 active:scale-[0.98] flex items-center justify-center gap-2 min-h-[48px] md:min-h-[40px];
   }
   
   .card-premium {
-    @apply bg-white border border-gray-100/30 rounded-2xl shadow-[0_15px_40px_-12px_rgba(0,0,0,0.02)] overflow-hidden transition-all duration-700 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.06)] hover:-translate-y-1;
+    @apply bg-white border border-gray-100/30 rounded-2xl shadow-[0_15px_40px_-12px_rgba(0,0,0,0.02)] overflow-hidden transition-all duration-700 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.06)] hover:-translate-y-1 p-5 md:p-4;
   }
 
   .glass-card {
-    @apply bg-white/60 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.03)];
+    @apply bg-white/60 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.03)] p-5 md:p-4;
   }
 
   .input-modern {
-    @apply w-full px-5 py-3.5 bg-gray-50/30 border border-gray-100/50 rounded-xl focus:border-champagne focus:ring-8 focus:ring-champagne/5 outline-none transition-all duration-500 font-medium placeholder:text-gray-400/60 text-midnight;
+    @apply w-full px-5 py-4 md:py-3.5 bg-gray-50/30 border border-gray-100/50 rounded-xl focus:border-champagne focus:ring-8 focus:ring-champagne/5 outline-none transition-all duration-500 font-medium placeholder:text-gray-400/60 text-midnight text-base md:text-sm min-h-[48px] md:min-h-[44px];
   }
 
   .shadow-soft {
@@ -52,5 +52,33 @@
 
   .shadow-elegant {
     @apply shadow-[0_30px_70px_-20px_rgba(0,0,0,0.05)];
+  }
+
+  .products-list {
+    @apply gap-y-10 md:gap-y-14;
+  }
+
+  .products-list .product-card {
+    @apply rounded-[1rem] shadow-sm overflow-hidden;
+  }
+
+  .product-card {
+    @apply transition-all duration-700 ease-out;
+  }
+
+  .product-card:hover {
+    @apply -translate-y-2;
+  }
+
+  .product-card .aspect-square {
+    @apply rounded-2xl overflow-hidden shadow-sm;
+  }
+
+  .product-card img {
+    @apply transition-transform duration-1000 ease-out;
+  }
+
+  .product-card:hover img {
+    @apply scale-110;
   }
 }
