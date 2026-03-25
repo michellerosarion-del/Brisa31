@@ -23,3 +23,9 @@ export default defineConfig(({mode}) => {
     },
   };
 });
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  base: './',
+})
+
