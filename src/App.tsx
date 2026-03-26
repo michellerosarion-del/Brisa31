@@ -448,25 +448,25 @@ const getCssColor = (colorName: string) => {
   return mapping[normalized] || normalized;
 };
 
-const ProductsContent = ({ filteredProducts, searchTerm, setSearchTerm, categoryFilter, setCategoryFilter, categories, handleAdjustStock, handleEdit, handleDeleteProduct, formatCurrency, toNum, onPromote }: any) => {
+const ProductsContent = ({ filteredProducts, searchTerm, setSearchTerm, categoryFilter, setCategoryFilter, categories, handleAdjustStock, handleDeleteProduct, handleEdit, formatCurrency, toNum, onPromote, getCssColor }: any) => {
   return (
-    <div className="space-y-10">
-      <Card className="p-4 shadow-soft border-none rounded-2xl bg-white">
-        <div className="flex flex-col md:flex-row gap-4">
+    <div className="space-y-4">
+      <Card className="p-3 shadow-sm border border-gray-100 rounded-xl bg-white">
+        <div className="flex flex-col md:flex-row gap-3">
           <div className="flex-1 relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-midnight transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-midnight transition-colors" />
             <input 
               type="text" 
               placeholder="Buscar produto..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl text-base font-medium focus:outline-none focus:ring-4 focus:ring-midnight/5 focus:border-midnight/10 transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-midnight/5 transition-all"
               value={searchTerm || ''}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative group w-full md:min-w-[200px]">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-midnight transition-colors" />
+          <div className="relative group w-full md:min-w-[180px]">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-midnight transition-colors" />
             <select 
-              className="w-full pl-10 pr-8 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl text-base font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-midnight/5 focus:border-midnight/10 transition-all cursor-pointer appearance-none"
+              className="w-full pl-9 pr-8 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-midnight/5 transition-all cursor-pointer appearance-none"
               value={categoryFilter || ''}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
@@ -475,131 +475,126 @@ const ProductsContent = ({ filteredProducts, searchTerm, setSearchTerm, category
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
           </div>
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 products-list">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 products-list">
         {filteredProducts.map((p: any) => (
           <motion.div 
             key={p.id}
             layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
             className="group product-card"
           >
-            <Card className="p-0 overflow-hidden border-none shadow-soft hover:shadow-elegant transition-all duration-700 rounded-2xl bg-white h-full flex flex-col">
-              <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                {p.is_featured && (
-                  <div className="absolute top-3 left-3 z-10 bg-amber-400/90 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-xl border border-white/20 uppercase tracking-[0.2em] flex items-center gap-1.5 animate-bounce-slow">
-                    <Flame className="w-3 h-3" /> Destaque
+            <Card className="p-3 border border-gray-100 shadow-sm hover:shadow-md transition-all rounded-xl bg-white h-full flex flex-col gap-2">
+              <div className="flex gap-3">
+                {/* Small Thumbnail */}
+                <div className="w-16 h-16 shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
+                  <img 
+                    src={p.image_url || (p.images && p.images[p.main_image_index || 0]) || `https://picsum.photos/seed/${p.id}/100/100`} 
+                    alt={p.name} 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer" 
+                  />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <p className="text-[8px] font-black text-champagne-dark uppercase tracking-widest truncate">{p.brand}</p>
+                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">REF: {p.code}</span>
                   </div>
-                )}
-                <img 
-                  src={p.image_url || (p.images && p.images[p.main_image_index || 0]) || `https://picsum.photos/seed/${p.id}/600/450`} 
-                  alt={p.name} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" 
-                  referrerPolicy="no-referrer" 
-                />
-                <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
-                  <span className="bg-midnight/80 backdrop-blur-xl px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-2xl text-champagne border border-white/20">
-                    {p.category}
-                  </span>
-                  {toNum(p.stock) <= toNum(p.min_stock) && (
-                    <span className="bg-rose-500/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.1em] shadow-xl border border-white/10 flex items-center gap-1.5 animate-pulse">
-                      <AlertTriangle className="w-2.5 h-2.5" /> Alerta
+                  <h3 className="font-bold text-gray-900 text-sm leading-tight truncate mb-0.5" title={p.name}>{p.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-midnight">{formatCurrency(p.price)}</span>
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 uppercase tracking-tighter`}>
+                      {p.category}
                     </span>
-                  )}
+                  </div>
                 </div>
               </div>
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-black text-champagne-dark uppercase tracking-[0.3em] mb-1.5">{p.brand}</p>
-                    <h3 className="font-serif font-bold text-gray-900 text-xl leading-tight tracking-tight group-hover:text-midnight transition-colors truncate">{p.name}</h3>
-                    <p className="text-[10px] text-gray-400 font-black tracking-widest mt-1 uppercase opacity-60">REF: {p.code}</p>
-                  </div>
-                </div>
 
+              {/* Dense Stock Info */}
+              <div className="bg-gray-50/50 rounded-lg p-2 space-y-1.5 border border-gray-100/50">
                 {p.has_variations && p.variations ? (
-                  <div className="space-y-3 mb-5">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Variações em Estoque</p>
-                    <div className="flex flex-wrap gap-2">
-                      {p.variations.map((v: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50/50 rounded-xl border border-gray-100/50 text-[10px] font-bold text-gray-700 hover:bg-white hover:border-champagne/30 transition-all duration-300">
-                          <div className="w-2.5 h-2.5 rounded-full border border-white shadow-sm shrink-0" style={{ backgroundColor: getCssColor(v.color) }} title={v.color} />
-                          <span className="uppercase tracking-wider">{v.size}</span>
-                          <span className="w-px h-3 bg-gray-200" />
-                          <span className={toNum(v.stock) <= 2 ? 'text-rose-500 font-black' : 'text-emerald-600 font-black'}>{v.stock}</span>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="space-y-1">
+                    {Object.entries(p.variations.reduce((acc: any, v: any) => {
+                      const color = v.color || 'Única';
+                      if (!acc[color]) acc[color] = [];
+                      acc[color].push(v);
+                      return acc;
+                    }, {})).map(([color, variations]: [string, any]) => (
+                      <div key={color} className="flex items-center gap-2 text-[10px]">
+                        <div className="w-2 h-2 rounded-full border border-white shrink-0" style={{ backgroundColor: getCssColor(color) }} />
+                        <span className="font-bold text-gray-600 truncate max-w-[60px]">{color}:</span>
+                        <span className="text-gray-500 font-medium">
+                          {variations
+                            .sort((a: any, b: any) => (a.size || '').localeCompare(b.size || ''))
+                            .map((v: any) => `${v.size || '?'}:${toNum(v.stock)}`)
+                            .join(' | ')}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-3 mb-5">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50/50 rounded-xl border border-gray-100/50">
-                      <Smartphone className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-[10px] font-black text-gray-700 uppercase tracking-wider">{p.size}</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50/50 rounded-xl border border-gray-100/50">
-                      <div className="w-3 h-3 rounded-full shadow-sm border border-white" style={{backgroundColor: getCssColor(p.color)}}></div>
-                      <span className="text-[10px] font-black text-gray-700 uppercase tracking-wider">{p.color}</span>
-                    </div>
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <div className="w-2 h-2 rounded-full border border-white shrink-0" style={{ backgroundColor: getCssColor(p.color) }} />
+                    <span className="font-bold text-gray-600 truncate max-w-[60px]">{p.color || 'Única'}:</span>
+                    <span className="text-gray-500 font-medium">{p.size || 'Único'}:{toNum(p.stock)}</span>
                   </div>
                 )}
+                
+                <div className="flex items-center justify-between pt-1 border-t border-gray-200/50">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total em Estoque</span>
+                  <span className={`text-xs font-black ${toNum(p.stock) <= toNum(p.min_stock) ? 'text-amber-600' : 'text-gray-900'}`}>
+                    {p.stock} <span className="text-[8px] font-bold opacity-50">un</span>
+                  </span>
+                </div>
+              </div>
 
-                <div className="mt-auto space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100/50 group-hover:bg-white transition-colors duration-500">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Estoque</span>
-                      <span className={`text-base font-black tracking-tight ${toNum(p.stock) <= toNum(p.min_stock) ? 'text-amber-600' : 'text-gray-900'}`}>
-                        {p.stock} <span className="text-[10px] font-bold text-gray-400">un</span>
-                      </span>
-                    </div>
-                    <div className="flex flex-col text-right">
-                      <span className="text-[8px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Preço</span>
-                      <span className="text-base font-black text-midnight tracking-tight">{formatCurrency(p.price)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                    <div className="flex gap-1.5">
-                      <button 
-                        onClick={() => handleAdjustStock(p.id, 1, 'reposicao')}
-                        className="w-8 h-8 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all duration-300 shadow-sm active:scale-90"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleAdjustStock(p.id, -1, 'ajuste')}
-                        className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-all duration-300 shadow-sm active:scale-90"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => handleEdit('produtos', p)}
-                        className="p-2 text-gray-400 hover:text-midnight hover:bg-midnight/5 rounded-lg transition-all duration-300"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteProduct(p.id)}
-                        className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all duration-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => onPromote(p.id)}
-                        className={`p-2 rounded-lg transition-all duration-300 ${p.is_featured ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
-                        title={p.is_featured ? 'Remover Destaque' : 'Destacar Produto'}
-                      >
-                        <Flame className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+              {/* Small Action Buttons */}
+              <div className="flex items-center justify-between mt-auto pt-1">
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => handleAdjustStock(p.id, 1, 'reposicao')}
+                    className="w-6 h-6 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-md hover:bg-emerald-600 hover:text-white transition-all active:scale-90"
+                    title="Adicionar 1"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                  <button 
+                    onClick={() => handleAdjustStock(p.id, -1, 'ajuste')}
+                    className="w-6 h-6 flex items-center justify-center bg-rose-50 text-rose-600 rounded-md hover:bg-rose-600 hover:text-white transition-all active:scale-90"
+                    title="Remover 1"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                </div>
+                
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => onPromote(p.id)}
+                    className={`p-1.5 rounded-md transition-all ${p.is_featured ? 'text-amber-500 bg-amber-50' : 'text-gray-300 hover:text-amber-500 hover:bg-amber-50'}`}
+                    title={p.is_featured ? "Remover destaque" : "Promover destaque"}
+                  >
+                    <Flame className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => handleEdit('produtos', p)}
+                    className="p-1.5 text-gray-400 hover:text-midnight hover:bg-gray-100 rounded-md transition-all"
+                    title="Editar"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteProduct(p.id)}
+                    className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
+                    title="Excluir"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </Card>
@@ -988,102 +983,59 @@ const ConfirmModal = ({ isOpen, onClose, config }: any) => {
 };
 
 const CatalogItem = ({ product, storeSettings }: any) => {
-  const firstAvailableVariation = product.has_variations && product.variations 
-    ? product.variations.find((v: any) => toNum(v.stock) > 0) || product.variations[0]
-    : null;
-  const [selectedSize, setSelectedSize] = useState(firstAvailableVariation ? firstAvailableVariation.size : (product.availableSizes && product.availableSizes.length > 0 ? product.availableSizes[0] : ''));
-  const [selectedColor, setSelectedColor] = useState(firstAvailableVariation ? firstAvailableVariation.color : (product.availableColors && product.availableColors.length > 0 ? product.availableColors[0] : ''));
+  const getImages = (p: any) => {
+    if (p.allImages && Array.isArray(p.allImages) && p.allImages.length > 0) return p.allImages;
+    if (p.images && Array.isArray(p.images) && p.images.length > 0) return p.images;
+    if (p.image_url) return [p.image_url];
+    if (p.image) return [p.image];
+    return [];
+  };
+
+  const images = getImages(product);
   const [currentImageIndex, setCurrentImageIndex] = useState(product.main_image_index || 0);
   const [direction, setDirection] = useState(0);
 
   const handleNext = () => {
-    if (product.images && product.images.length > 1) {
+    if (images.length > 1) {
       setDirection(1);
-      setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }
   };
 
   const handlePrev = () => {
-    if (product.images && product.images.length > 1) {
+    if (images.length > 1) {
       setDirection(-1);
-      setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
     }
   };
 
-  // Find the specific variation if it exists
-  const currentVariation = product.has_variations && product.variations
-    ? product.variations.find((v: any) => v.size === selectedSize && v.color === selectedColor)
-    : null;
+  const allAvailableColors = product.availableColors || [];
+  const allAvailableSizes = product.availableSizes || [];
 
-  const currentStock = product.has_variations ? (currentVariation ? toNum(currentVariation.stock) : 0) : toNum(product.totalStock || product.stock);
-  const currentBrand = currentVariation?.brand || product.brand || 'Brisa 31';
-
-  // Get all unique colors and sizes that have ANY stock available for this product
-  const allAvailableColors = product.has_variations && product.variations
-    ? [...new Set(product.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.color))]
-    : (toNum(product.totalStock || product.stock) > 0 ? (product.color ? [product.color] : []) : []);
-
-  const allAvailableSizes = product.has_variations && product.variations
-    ? [...new Set(product.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.size))]
-    : (toNum(product.totalStock || product.stock) > 0 ? (product.size ? [product.size] : []) : []);
-
-  // Helper to check if a specific combination is available
-  const isCombinationAvailable = (color: string, size: string) => {
-    if (!product.has_variations) return toNum(product.totalStock || product.stock) > 0;
-    return product.variations.some((v: any) => v.color === color && v.size === size && toNum(v.stock) > 0);
-  };
-
-  const handleColorClick = (color: string) => {
-    setSelectedColor(color);
-    // If current size is not available in new color, pick first available size for this color
-    if (!isCombinationAvailable(color, selectedSize)) {
-      const firstAvailableSizeForColor = product.has_variations && product.variations
-        ? product.variations.find((v: any) => v.color === color && toNum(v.stock) > 0)?.size
-        : null;
-      if (firstAvailableSizeForColor) {
-        setSelectedSize(firstAvailableSizeForColor);
-      }
-    }
-  };
-
-  const handleSizeClick = (size: string) => {
-    setSelectedSize(size);
-    // If current color is not available in new size, pick first available color for this size
-    if (!isCombinationAvailable(selectedColor, size)) {
-      const firstAvailableColorForSize = product.has_variations && product.variations
-        ? product.variations.find((v: any) => v.size === size && toNum(v.stock) > 0)?.color
-        : null;
-      if (firstAvailableColorForSize) {
-        setSelectedColor(firstAvailableColorForSize);
-      }
-    }
-  };
-
-  const price = toNum(currentVariation?.price || product.price);
+  const price = toNum(product.price);
+  const brand = product.brand || 'Brisa 31';
+  const isMaisVendido = product.is_featured;
+  const isUltimasUnidades = toNum(product.totalStock) > 0 && toNum(product.totalStock) <= 3;
 
   return (
     <motion.div 
       layout
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.08)] transition-all duration-700 border border-gray-100/50 flex flex-col group product-card"
+      className="bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-elegant transition-all duration-500 border border-gray-100/50 flex flex-col group h-full product-card"
     >
-      <div className="aspect-square bg-gray-50 relative overflow-hidden group/carousel">
+      <div className="aspect-[4/5] bg-gray-50 relative overflow-hidden group/carousel">
         <AnimatePresence initial={false} custom={direction} mode="popLayout">
           <motion.img 
             key={currentImageIndex}
-            src={(product.images && product.images[currentImageIndex]) || product.image_url || `https://picsum.photos/seed/${product.id}/400/400`} 
+            src={images[currentImageIndex] || `https://picsum.photos/seed/${product.id}/600/750`} 
             custom={direction}
             variants={{
               enter: (direction: number) => ({
                 x: direction > 0 ? '100%' : direction < 0 ? '-100%' : 0,
                 opacity: 0
               }),
-              center: {
-                zIndex: 1,
-                x: 0,
-                opacity: 1
-              },
+              center: { zIndex: 1, x: 0, opacity: 1 },
               exit: (direction: number) => ({
                 zIndex: 0,
                 x: direction < 0 ? '100%' : direction > 0 ? '-100%' : 0,
@@ -1097,208 +1049,194 @@ const CatalogItem = ({ product, storeSettings }: any) => {
               x: { type: "spring", stiffness: 300, damping: 30 },
               opacity: { duration: 0.2 }
             }}
-            drag="x"
+            drag={images.length > 1 ? "x" : false}
             dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={1}
-            onDragEnd={(e, { offset, velocity }) => {
-              const swipe = offset.x;
-              if (swipe < -50) {
+            dragElastic={0.2}
+            onDragEnd={(_e, info) => {
+              if (images.length <= 1) return;
+              const swipeThreshold = 50;
+              if (info.offset.x < -swipeThreshold) {
                 handleNext();
-              } else if (swipe > 50) {
+              } else if (info.offset.x > swipeThreshold) {
                 handlePrev();
               }
             }}
-            alt={product.name || 'Produto'}
+            alt={product.name}
             className="absolute inset-0 w-full h-full object-cover cursor-grab active:cursor-grabbing"
             referrerPolicy="no-referrer"
+            onError={(e: any) => {
+              e.target.src = `https://picsum.photos/seed/${product.id}/600/750`;
+            }}
           />
         </AnimatePresence>
-        
-        {product.images && product.images.length > 1 && (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1.5 md:p-2 bg-white/60 backdrop-blur-md rounded-full text-midnight shadow-lg md:opacity-0 md:group-hover/carousel:opacity-100 transition-opacity flex items-center justify-center hover:bg-white active:scale-90"
-            >
-              <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleNext(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1.5 md:p-2 bg-white/60 backdrop-blur-md rounded-full text-midnight shadow-lg md:opacity-0 md:group-hover/carousel:opacity-100 transition-opacity flex items-center justify-center hover:bg-white active:scale-90"
-            >
-              <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
 
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-1.5 px-2 py-1.5 bg-black/20 backdrop-blur-md rounded-full">
-              {product.images.map((_: any, idx: number) => (
+        {images.length > 1 && (
+          <>
+            <button 
+              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-white/80 backdrop-blur-md rounded-full text-midnight shadow-md opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white active:scale-90"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-white/80 backdrop-blur-md rounded-full text-midnight shadow-md opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white active:scale-90"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-1 px-1.5 py-0.5 bg-black/20 backdrop-blur-md rounded-full">
+              {images.map((_: any, idx: number) => (
                 <button
                   key={idx}
                   onClick={() => {
                     setDirection(idx > currentImageIndex ? 1 : -1);
                     setCurrentImageIndex(idx);
                   }}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${currentImageIndex === idx ? 'bg-white w-3' : 'bg-white/40'}`}
+                  className={`w-1 h-1 rounded-full transition-all ${currentImageIndex === idx ? 'bg-white w-2.5' : 'bg-white/40'}`}
                 />
               ))}
             </div>
           </>
         )}
 
-        <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-          <span className="bg-midnight/80 backdrop-blur-xl px-5 py-2 rounded-full text-[12px] font-black uppercase tracking-[0.25em] shadow-2xl text-champagne border border-white/20">
-            {product.category || 'Geral'}
-          </span>
-          {currentStock <= 3 && currentStock > 0 && (
-            <span className="bg-rose-500/90 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-xl border border-white/10">
-              Últimas unidades
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          {isMaisVendido && (
+            <span className="bg-amber-400 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1">
+              <Flame className="w-2.5 h-2.5" /> 🔥 Mais vendido
+            </span>
+          )}
+          {isUltimasUnidades && (
+            <span className="bg-rose-500 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1">
+              <Zap className="w-2.5 h-2.5" /> Últimas unidades
             </span>
           )}
           {toNum(product.totalStock) === 0 && (
-            <span className="bg-gray-500/90 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-xl border border-white/10">
+            <span className="bg-gray-800 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg">
               Esgotado
             </span>
           )}
         </div>
       </div>
-      <div className="p-5 md:p-6 flex-1 flex flex-col">
-        <div className="mb-4">
-          <p className="text-[11px] font-black text-champagne-dark uppercase tracking-[0.3em] mb-2">{currentBrand}</p>
-          <h3 className="font-serif font-bold text-midnight text-2xl md:text-3xl line-clamp-2 leading-tight tracking-tight group-hover:text-champagne-dark transition-colors">{product.name || 'Sem nome'}</h3>
-        </div>
-        
-        <div className="space-y-5 mb-6">
-          {/* Color Selection */}
-          <div className="space-y-2">
-            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Cores Disponíveis</p>
-            <div className="flex flex-wrap gap-3">
-              {allAvailableColors.map((color: string) => {
-                const isAvailableForSelectedSize = isCombinationAvailable(color, selectedSize);
-                return (
-                  <button
-                    key={color}
-                    onClick={() => handleColorClick(color)}
-                    disabled={!isAvailableForSelectedSize && false} // Keep clickable but show as unavailable
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 ${
-                      selectedColor === color 
-                        ? 'bg-midnight text-white border-midnight shadow-[0_10px_20px_-5px_rgba(21,25,43,0.3)] scale-105 z-10' 
-                        : isAvailableForSelectedSize
-                          ? 'bg-white text-gray-600 border-gray-100 hover:border-champagne/50 hover:shadow-sm'
-                          : 'bg-gray-50/50 text-gray-300 border-gray-100/50 opacity-40 cursor-not-allowed grayscale'
-                    }`}
-                  >
-                    <div 
-                      className="w-4 h-4 rounded-full border border-white/40 shadow-sm shrink-0" 
-                      style={{ backgroundColor: getCssColor(color) }}
-                    />
-                    <span className="text-[11px] font-bold capitalize tracking-tight">{color}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Size Selection */}
-          <div className="space-y-2">
-            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Tamanhos Disponíveis</p>
-            <div className="flex flex-wrap gap-2">
-              {allAvailableSizes.sort().map((size: string) => {
-                const isAvailableForSelectedColor = isCombinationAvailable(selectedColor, size);
-                return (
-                  <button 
-                    key={size} 
-                    onClick={() => handleSizeClick(size)}
-                    className={`min-w-[44px] h-10 flex items-center justify-center rounded-xl text-[12px] font-black transition-all duration-300 border ${
-                      selectedSize === size 
-                        ? 'bg-midnight text-champagne border-midnight shadow-[0_10px_20px_-5px_rgba(21,25,43,0.3)] scale-105 z-10' 
-                        : isAvailableForSelectedColor 
-                          ? 'bg-white text-gray-600 border-gray-100 hover:border-champagne/50 hover:shadow-sm'
-                          : 'bg-gray-50/50 text-gray-300 border-gray-100/50 opacity-40 cursor-not-allowed'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-            <div className="flex flex-col">
-              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Disponibilidade</span>
-              <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${currentStock > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                <span className={`text-[10px] font-black uppercase tracking-widest ${currentStock > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {currentStock > 0 ? `${currentStock} em estoque` : 'Esgotado'}
-                </span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Opção Selecionada</span>
-              <p className="text-[10px] font-bold text-midnight capitalize">{selectedColor} | {selectedSize}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-auto space-y-3">
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="mb-3">
+          <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] mb-0.5">{brand}</p>
+          <h3 className="font-serif font-bold text-gray-900 text-lg md:text-xl leading-tight mb-1.5 group-hover:text-midnight transition-colors line-clamp-2">
+            {product.name}
+          </h3>
           <div className="flex items-baseline gap-1">
-            <span className="text-sm font-bold text-gray-900">R$</span>
-            <span className="text-2xl font-black text-gray-900 tracking-tight">
+            <span className="text-xs font-bold text-midnight">R$</span>
+            <span className="text-xl font-black text-midnight tracking-tighter">
               {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          
-          <a 
-            href={`https://wa.me/${(storeSettings.telefone_whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(
-              `Olá! Tenho interesse neste produto:\n\n*Produto:* ${product.name || 'Produto'}\n*Marca:* ${currentBrand}\n*Preço:* R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n*Cor:* ${selectedColor || 'N/A'}\n*Tamanho:* ${selectedSize || 'N/A'}`
-            )}`}
-            target="_blank"
-            className={`w-full btn-primary py-3.5 text-sm ${currentStock === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-            onClick={(e) => currentStock === 0 && e.preventDefault()}
-          >
-            <MessageCircle className="w-4 h-4" /> Comprar no WhatsApp
-          </a>
         </div>
+
+        <div className="space-y-3 mb-4">
+          {product.availableSizes && product.availableSizes.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-black text-midnight uppercase tracking-widest flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Disponível:
+              </span>
+              <div className="flex flex-wrap gap-1.5 pl-4.5">
+                <span className="text-xs font-black text-gray-700 uppercase tracking-widest">
+                  {product.availableSizes.sort().join(' • ')}
+                </span>
+              </div>
+            </div>
+          ) : toNum(product.totalStock) > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-black text-midnight uppercase tracking-widest flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Disponível:
+              </span>
+              <div className="flex flex-wrap gap-1.5 pl-4.5">
+                <span className="text-xs font-black text-gray-700 uppercase tracking-widest">
+                  Tamanho Único
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex items-center gap-1.5 pt-2 border-t border-gray-50">
+            <div className={`w-1.5 h-1.5 rounded-full ${toNum(product.totalStock) > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
+            <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider">
+              Total: {product.totalStock} {toNum(product.totalStock) === 1 ? 'unidade' : 'unidades'}
+            </span>
+          </div>
+        </div>
+
+        <a
+          href={`https://wa.me/${(storeSettings.telefone_whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+            `Olá! Gostaria de pedir este produto:\n\n*${product.name}*\nMarca: ${brand}\nPreço: R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${allAvailableColors.length > 0 ? `\n\nCores: ${allAvailableColors.join(', ')}` : ''}${allAvailableSizes.length > 0 ? `\nTamanhos: ${allAvailableSizes.join(', ')}` : ''}`
+          )}`}
+          target="_blank"
+          className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-md shadow-emerald-600/10 transition-all flex items-center justify-center gap-2 active:scale-95 ${toNum(product.totalStock) === 0 ? 'opacity-50 grayscale cursor-not-allowed pointer-events-none' : ''}`}
+        >
+          <MessageCircle className="w-3.5 h-3.5" /> Pedir no WhatsApp
+        </a>
       </div>
     </motion.div>
   );
 };
 
 const CatalogContent = ({ products, storeSettings, catalogSearch, setCatalogSearch, catalogSizeFilter, setCatalogSizeFilter, catalogColorFilter, setCatalogColorFilter, catalogPriceFilter, setCatalogPriceFilter, showNotification, showConfirm }: any) => {
-  // Group products by Name, Brand, and Color to show available sizes
+  // Group products by Name and Brand to show all available colors and sizes in one card
   const groupedProducts = (products || []).reduce((acc: any, p: any) => {
     if (p.has_variations && p.variations) {
       // Products with variations are already grouped by model
       const key = `var-${p.id}`;
-      const availableVariations = p.variations.filter((v: any) => toNum(v.stock) > 0);
       const totalStock = p.variations.reduce((sum: number, v: any) => sum + toNum(v.stock), 0);
       
       acc[key] = {
         ...p,
-        availableSizes: Array.from(new Set(availableVariations.map((v: any) => v.size))),
-        availableColors: Array.from(new Set(availableVariations.map((v: any) => v.color))),
+        availableSizes: Array.from(new Set(p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.size))),
+        availableColors: Array.from(new Set(p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.color))),
+        allVariations: p.variations,
         totalStock: totalStock
       };
     } else {
-      // Unique key for the product model in a specific color
-      const key = `${p.name || 'Sem nome'}|${p.brand || 'Brisa 31'}|${p.color || 'N/A'}|${p.price}|${p.category || 'Geral'}`;
+      // Group by Name and Brand for non-variation products
+      const key = `${p.name || 'Sem nome'}|${p.brand || 'Brisa 31'}`;
+      const pImages = p.images && Array.isArray(p.images) ? p.images : (p.image_url ? [p.image_url] : (p.image ? [p.image] : []));
+      
       if (!acc[key]) {
         acc[key] = { 
           ...p, 
           availableSizes: toNum(p.stock) > 0 ? (p.size ? [p.size] : []) : [], 
           availableColors: toNum(p.stock) > 0 ? (p.color ? [p.color] : []) : [],
           totalStock: toNum(p.stock),
+          allVariations: [{ size: p.size, color: p.color, stock: p.stock }],
+          // Collect all images from all products in this group
+          allImages: [...pImages]
         };
       } else {
-        if (toNum(p.stock) > 0 && p.size && !acc[key].availableSizes.includes(p.size)) {
-          acc[key].availableSizes.push(p.size);
+        if (toNum(p.stock) > 0) {
+          if (p.size && !acc[key].availableSizes.includes(p.size)) {
+            acc[key].availableSizes.push(p.size);
+          }
+          if (p.color && !acc[key].availableColors.includes(p.color)) {
+            acc[key].availableColors.push(p.color);
+          }
         }
         acc[key].totalStock += toNum(p.stock);
+        acc[key].allVariations.push({ size: p.size, color: p.color, stock: p.stock });
+        // Add images if they are not already in the list
+        pImages.forEach((img: string) => {
+          if (img && !acc[key].allImages.includes(img)) {
+            acc[key].allImages.push(img);
+          }
+        });
       }
     }
     return acc;
   }, {});
 
-  const catalogItems = Object.values(groupedProducts).sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
+  const catalogItems = Object.values(groupedProducts).sort((a: any, b: any) => {
+    if (a.is_featured && !b.is_featured) return -1;
+    if (!a.is_featured && b.is_featured) return 1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
 
   const availableSizes = Array.from(new Set((products || []).flatMap((p: any) => p.has_variations && p.variations ? p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.size) : (toNum(p.stock) > 0 ? [p.size] : [])))).filter(Boolean).sort();
   const availableColors = Array.from(new Set((products || []).flatMap((p: any) => p.has_variations && p.variations ? p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.color) : (toNum(p.stock) > 0 ? [p.color] : [])))).filter(Boolean).sort();
@@ -1308,7 +1246,7 @@ const CatalogContent = ({ products, storeSettings, catalogSearch, setCatalogSear
                          (p.brand || '').toLowerCase().includes((catalogSearch || '').toLowerCase()) ||
                          (p.has_variations && p.variations && p.variations.some((v: any) => (v.brand || '').toLowerCase().includes((catalogSearch || '').toLowerCase())));
     const matchesSize = catalogSizeFilter === '' || (p.availableSizes || []).includes(catalogSizeFilter);
-    const matchesColor = catalogColorFilter === '' || (p.has_variations ? (p.availableColors || []).includes(catalogColorFilter) : p.color === catalogColorFilter);
+    const matchesColor = catalogColorFilter === '' || (p.availableColors || []).includes(catalogColorFilter);
     const matchesPrice = catalogPriceFilter === '' || toNum(p.price) <= Number(catalogPriceFilter);
     return matchesSearch && matchesSize && matchesColor && matchesPrice;
   });
@@ -6215,6 +6153,7 @@ function AppContent() {
                    }
                  }
                }}
+               getCssColor={getCssColor}
              />
            )}
 
