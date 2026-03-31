@@ -3,55 +3,55 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Cormorant Garamond", serif;
+  --font-serif: "Inter", sans-serif;
 
-  --color-midnight: #15192b;
-  --color-champagne: #e1c1a0;
-  --color-champagne-dark: #c9a585;
-  --color-champagne-light: #f5e6d3;
+  --color-midnight: #1e293b;
+  --color-champagne: #f1f5f9;
+  --color-champagne-dark: #e2e8f0;
+  --color-champagne-light: #f8fafc;
   
   /* Override default colors to match theme */
-  --color-primary: var(--color-midnight);
+  --color-primary: #3b82f6;
   --color-secondary: var(--color-champagne);
 }
 
 @layer base {
   body {
-    @apply font-sans text-midnight bg-[#fcfcfc] text-sm md:text-[15px] leading-relaxed;
+    @apply font-sans text-slate-800 bg-[#f8f9fa] text-sm md:text-[14px] leading-normal;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif tracking-tight;
+    @apply font-sans font-semibold tracking-tight text-slate-900;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-midnight text-champagne hover:bg-black transition-all duration-500 rounded-xl px-6 py-3.5 md:px-5 md:py-3 font-bold shadow-xl shadow-midnight/10 active:scale-[0.98] flex items-center justify-center gap-2 min-h-[48px] md:min-h-[40px];
+    @apply bg-slate-800 text-white hover:bg-slate-900 transition-all duration-200 rounded-lg px-4 py-2 font-semibold shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 min-h-[36px];
   }
   
   .btn-secondary {
-    @apply bg-champagne text-midnight hover:bg-champagne-dark transition-all duration-500 rounded-xl px-6 py-3.5 md:px-5 md:py-3 font-bold shadow-xl shadow-champagne/10 active:scale-[0.98] flex items-center justify-center gap-2 min-h-[48px] md:min-h-[40px];
+    @apply bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all duration-200 rounded-lg px-4 py-2 font-semibold shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 min-h-[36px];
   }
   
   .card-premium {
-    @apply bg-white border border-gray-100/30 rounded-2xl shadow-[0_15px_40px_-12px_rgba(0,0,0,0.02)] overflow-hidden transition-all duration-700 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.06)] hover:-translate-y-1 p-5 md:p-4;
+    @apply bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 p-4;
   }
 
   .glass-card {
-    @apply bg-white/60 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.03)] p-5 md:p-4;
+    @apply bg-white border border-slate-200 rounded-xl shadow-sm p-4;
   }
 
   .input-modern {
-    @apply w-full px-5 py-4 md:py-3.5 bg-gray-50/30 border border-gray-100/50 rounded-xl focus:border-champagne focus:ring-8 focus:ring-champagne/5 outline-none transition-all duration-500 font-medium placeholder:text-gray-400/60 text-midnight text-base md:text-sm min-h-[48px] md:min-h-[44px];
+    @apply w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all duration-200 font-medium placeholder:text-slate-400 text-slate-900 text-sm min-h-[38px];
   }
 
   .shadow-soft {
-    @apply shadow-[0_15px_50px_-15px_rgba(0,0,0,0.03)];
+    @apply shadow-sm;
   }
 
   .shadow-elegant {
-    @apply shadow-[0_30px_70px_-20px_rgba(0,0,0,0.05)];
+    @apply shadow-md;
   }
 
   .products-list {
