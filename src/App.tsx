@@ -90,6 +90,8 @@ import {
   Activity,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CatalogPage, CatalogContent, Modal } from './components/Catalog';
+import { toNum, formatCurrency } from './lib/utils';
 import { 
   collection, 
   getDocs, 
@@ -373,22 +375,6 @@ type CartItem = {
 
 // --- Components ---
 
-const toNum = (val: any) => {
-  if (val === null || val === undefined || val === '') return 0;
-  if (typeof val === 'number') return val;
-  let clean = String(val).replace('R$', '').replace(/\s/g, '');
-  if (clean.includes('.') && clean.includes(',')) {
-    clean = clean.replace(/\./g, '').replace(',', '.');
-  } else {
-    clean = clean.replace(',', '.');
-  }
-  const n = parseFloat(clean);
-  return isNaN(n) ? 0 : n;
-};
-
-const formatCurrency = (val: number) => 
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(toNum(val));
-
 const calcularFinanceiro = (
   sales: Sale[], 
   expenses: Expense[], 
@@ -503,30 +489,6 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
     {children}
   </motion.div>
 );
-
-const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl', noPadding = false }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidth?: string; noPadding?: boolean }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`bg-white rounded-xl w-full ${maxWidth} overflow-hidden shadow-2xl border border-slate-200`}
-      >
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="font-sans font-bold text-slate-800 text-lg tracking-tight">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-all active:scale-90">
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
-        </div>
-        <div className={`${noPadding ? '' : 'p-6'} max-h-[80vh] overflow-y-auto custom-scrollbar`}>
-          {children}
-        </div>
-      </motion.div>
-    </div>
-  );
-};
 
 const StatCard = ({ title, value, emoji, colorClass, trend }: any) => (
   <Card className="flex items-center justify-between p-4 hover:border-blue-300 transition-all duration-200 group">
@@ -1312,408 +1274,6 @@ const ConfirmModal = ({ isOpen, onClose, config }: any) => {
           </button>
         </div>
       </motion.div>
-    </div>
-  );
-};
-
-const CatalogItem = ({ product, storeSettings }: any) => {
-  const getImages = (p: any) => {
-    if (p.allImages && Array.isArray(p.allImages) && p.allImages.length > 0) return p.allImages;
-    if (p.images && Array.isArray(p.images) && p.images.length > 0) return p.images;
-    if (p.image_url) return [p.image_url];
-    if (p.image) return [p.image];
-    return [];
-  };
-
-  const images = getImages(product);
-  const [currentImageIndex, setCurrentImageIndex] = useState(product.main_image_index || 0);
-  const [direction, setDirection] = useState(0);
-
-  const handleNext = () => {
-    if (images.length > 1) {
-      setDirection(1);
-      setCurrentImageIndex((prev) => (prev + 1) % images.length);
-    }
-  };
-
-  const handlePrev = () => {
-    if (images.length > 1) {
-      setDirection(-1);
-      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
-    }
-  };
-
-  const allAvailableColors = product.availableColors || [];
-  const allAvailableSizes = product.availableSizes || [];
-
-  const price = toNum(product.price);
-  const brand = product.brand || 'Brisa 31';
-  const isMaisVendido = product.is_featured || product.is_best_seller;
-  const isNovidade = product.is_new;
-  const isUltimasUnidades = toNum(product.totalStock) > 0 && toNum(product.totalStock) <= 3;
-  const rating = toNum(product.rating);
-
-  return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-elegant transition-all duration-500 border border-gray-100/50 flex flex-col group h-full product-card"
-    >
-      <div className="aspect-[4/5] bg-gray-50 relative overflow-hidden group/carousel">
-        <AnimatePresence initial={false} custom={direction} mode="popLayout">
-          <motion.img 
-            key={currentImageIndex}
-            src={images[currentImageIndex] || `https://picsum.photos/seed/${product.id}/600/750`} 
-            custom={direction}
-            variants={{
-              enter: (direction: number) => ({
-                x: direction > 0 ? '100%' : direction < 0 ? '-100%' : 0,
-                opacity: 0
-              }),
-              center: { zIndex: 1, x: 0, opacity: 1 },
-              exit: (direction: number) => ({
-                zIndex: 0,
-                x: direction < 0 ? '100%' : direction > 0 ? '-100%' : 0,
-                opacity: 0
-              })
-            }}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{
-              x: { type: "spring", stiffness: 300, damping: 30 },
-              opacity: { duration: 0.2 }
-            }}
-            whileHover={{ scale: 1.1 }}
-            drag={images.length > 1 ? "x" : false}
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
-            onDragEnd={(_e, info) => {
-              if (images.length <= 1) return;
-              const swipeThreshold = 50;
-              if (info.offset.x < -swipeThreshold) {
-                handleNext();
-              } else if (info.offset.x > swipeThreshold) {
-                handlePrev();
-              }
-            }}
-            alt={product.name}
-            className="absolute inset-0 w-full h-full object-cover cursor-grab active:cursor-grabbing transition-transform duration-700"
-            referrerPolicy="no-referrer"
-            onError={(e: any) => {
-              e.target.src = `https://picsum.photos/seed/${product.id}/600/750`;
-            }}
-          />
-        </AnimatePresence>
-
-        {images.length > 1 && (
-          <>
-            <button 
-              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-white/80 backdrop-blur-md rounded-full text-midnight shadow-md opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white active:scale-90"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleNext(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-white/80 backdrop-blur-md rounded-full text-midnight shadow-md opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white active:scale-90"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-            
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-1 px-1.5 py-0.5 bg-black/20 backdrop-blur-md rounded-full">
-              {images.map((_: any, idx: number) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setDirection(idx > currentImageIndex ? 1 : -1);
-                    setCurrentImageIndex(idx);
-                  }}
-                  className={`w-1 h-1 rounded-full transition-all ${currentImageIndex === idx ? 'bg-white w-2.5' : 'bg-white/40'}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-          {isMaisVendido && (
-            <span className="bg-amber-400 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1">
-              <Flame className="w-2.5 h-2.5" /> 🔥 Mais vendido
-            </span>
-          )}
-          {isNovidade && (
-            <span className="bg-sky-500 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1">
-              <Star className="w-2.5 h-2.5 fill-white" /> Novidade
-            </span>
-          )}
-          {isUltimasUnidades && (
-            <span className="bg-rose-500 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1">
-              <Zap className="w-2.5 h-2.5" /> Últimas unidades
-            </span>
-          )}
-          {toNum(product.totalStock) === 0 && (
-            <span className="bg-gray-800 text-white px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg">
-              Esgotado
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="mb-3">
-          <div className="flex justify-between items-start">
-            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] mb-0.5">{brand}</p>
-            {rating > 0 && (
-              <div className="flex items-center gap-0.5">
-                <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                <span className="text-[10px] font-black text-gray-600">{rating.toFixed(1)}</span>
-              </div>
-            )}
-          </div>
-          <h3 className="font-serif font-bold text-gray-900 text-lg md:text-xl leading-tight mb-1.5 group-hover:text-midnight transition-colors line-clamp-2">
-            {product.name}
-          </h3>
-          {product.short_description && (
-            <p className="text-[11px] text-gray-500 line-clamp-2 mb-2 leading-relaxed italic">
-              "{product.short_description}"
-            </p>
-          )}
-          <div className="flex items-baseline gap-1">
-            <span className="text-xs font-bold text-midnight">R$</span>
-            <span className="text-xl font-black text-midnight tracking-tighter">
-              {price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-4 mb-4">
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-black text-midnight uppercase tracking-widest flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Disponível:
-            </span>
-            
-            {toNum(product.totalStock) > 0 ? (
-              <div className="space-y-3 pl-4.5">
-                {(() => {
-                  const variationsBySize = (product.allVariations || []).reduce((acc: any, v: any) => {
-                    const stock = toNum(v.stock);
-                    if (stock <= 0) return acc;
-                    const size = v.size || 'Único';
-                    if (!acc[size]) acc[size] = [];
-                    acc[size].push(v);
-                    return acc;
-                  }, {});
-
-                  const sizeOrder: any = { 'PP': 1, 'P': 2, 'M': 3, 'G': 4, 'GG': 5, 'XG': 6 };
-                  const sortedSizes = Object.keys(variationsBySize).sort((a, b) => {
-                    return (sizeOrder[a] || 99) - (sizeOrder[b] || 99);
-                  });
-
-                  return sortedSizes.map(size => (
-                    <div key={size} className="space-y-1">
-                      <p className="text-[11px] font-black text-gray-900 uppercase tracking-wider">{size}:</p>
-                      <div className="space-y-0.5 pl-2">
-                        {variationsBySize[size].map((v: any, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2 text-[10px] text-gray-600 font-medium">
-                            <div className="w-1.5 h-1.5 rounded-full border border-gray-100" style={{ backgroundColor: getCssColor(v.color) }} />
-                            <span>{v.color || 'Única'} ({toNum(v.stock)})</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-            ) : (
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-4.5">Indisponível</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5 pt-2 border-t border-gray-50">
-            <div className={`w-1.5 h-1.5 rounded-full ${toNum(product.totalStock) > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`} />
-            <span className="text-[9px] font-black text-gray-500 uppercase tracking-wider">
-              Total: {product.totalStock} {toNum(product.totalStock) === 1 ? 'unidade' : 'unidades'}
-            </span>
-          </div>
-        </div>
-
-        <a
-          href={`https://wa.me/${(storeSettings.telefone_whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(
-            `Olá! Gostaria de pedir este produto:\n\n*${product.name}*\nMarca: ${brand}\nPreço: R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${allAvailableColors.length > 0 ? `\n\nCores: ${allAvailableColors.join(', ')}` : ''}${allAvailableSizes.length > 0 ? `\nTamanhos: ${allAvailableSizes.join(', ')}` : ''}`
-          )}`}
-          target="_blank"
-          className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-3 active:scale-95 group-hover:bg-emerald-500 ${toNum(product.totalStock) === 0 ? 'opacity-50 grayscale cursor-not-allowed pointer-events-none' : ''}`}
-        >
-          <MessageCircle className="w-4 h-4 animate-bounce" /> Pedir no WhatsApp
-        </a>
-      </div>
-    </motion.div>
-  );
-};
-
-const CatalogContent = ({ products, storeSettings, catalogSearch, setCatalogSearch, catalogCategoryFilter, setCatalogCategoryFilter, catalogSizeFilter, setCatalogSizeFilter, catalogColorFilter, setCatalogColorFilter, catalogPriceFilter, setCatalogPriceFilter, showNotification, showConfirm }: any) => {
-  // Group products by Name and Brand to show all available colors and sizes in one card
-  const groupedProducts = (products || []).reduce((acc: any, p: any) => {
-    if (p.has_variations && p.variations) {
-      // Products with variations are already grouped by model
-      const key = `var-${p.id}`;
-      const totalStock = p.variations.reduce((sum: number, v: any) => sum + toNum(v.stock), 0);
-      
-      acc[key] = {
-        ...p,
-        availableSizes: Array.from(new Set(p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.size))),
-        availableColors: Array.from(new Set(p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.color))),
-        allVariations: p.variations,
-        totalStock: totalStock
-      };
-    } else {
-      // Group by Name and Brand for non-variation products
-      const key = `${p.name || 'Sem nome'}|${p.brand || 'Brisa 31'}`;
-      const pImages = p.images && Array.isArray(p.images) ? p.images : (p.image_url ? [p.image_url] : (p.image ? [p.image] : []));
-      
-      if (!acc[key]) {
-        acc[key] = { 
-          ...p, 
-          availableSizes: toNum(p.stock) > 0 ? (p.size ? [p.size] : []) : [], 
-          availableColors: toNum(p.stock) > 0 ? (p.color ? [p.color] : []) : [],
-          totalStock: toNum(p.stock),
-          allVariations: [{ size: p.size, color: p.color, stock: p.stock }],
-          // Collect all images from all products in this group
-          allImages: [...pImages]
-        };
-      } else {
-        if (toNum(p.stock) > 0) {
-          if (p.size && !acc[key].availableSizes.includes(p.size)) {
-            acc[key].availableSizes.push(p.size);
-          }
-          if (p.color && !acc[key].availableColors.includes(p.color)) {
-            acc[key].availableColors.push(p.color);
-          }
-        }
-        acc[key].totalStock += toNum(p.stock);
-        acc[key].allVariations.push({ size: p.size, color: p.color, stock: p.stock });
-        // Add images if they are not already in the list
-        pImages.forEach((img: string) => {
-          if (img && !acc[key].allImages.includes(img)) {
-            acc[key].allImages.push(img);
-          }
-        });
-      }
-    }
-    return acc;
-  }, {});
-
-  const catalogItems = Object.values(groupedProducts).sort((a: any, b: any) => {
-    if (a.is_featured && !b.is_featured) return -1;
-    if (!a.is_featured && b.is_featured) return 1;
-    return (a.name || '').localeCompare(b.name || '');
-  });
-
-  const availableSizes = Array.from(new Set((products || []).flatMap((p: any) => p.has_variations && p.variations ? p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.size) : (toNum(p.stock) > 0 ? [p.size] : [])))).filter(Boolean).sort();
-  const availableColors = Array.from(new Set((products || []).flatMap((p: any) => p.has_variations && p.variations ? p.variations.filter((v: any) => toNum(v.stock) > 0).map((v: any) => v.color) : (toNum(p.stock) > 0 ? [p.color] : [])))).filter(Boolean).sort();
-  const availableCategories = Array.from(new Set((products || []).map((p: any) => p.category))).filter(Boolean).sort();
-
-  const filteredCatalog = catalogItems.filter((p: any) => {
-    const matchesSearch = (p.name || '').toLowerCase().includes((catalogSearch || '').toLowerCase()) || 
-                         (p.brand || '').toLowerCase().includes((catalogSearch || '').toLowerCase()) ||
-                         (p.has_variations && p.variations && p.variations.some((v: any) => (v.brand || '').toLowerCase().includes((catalogSearch || '').toLowerCase())));
-    const matchesCategory = catalogCategoryFilter === '' || p.category === catalogCategoryFilter;
-    const matchesSize = catalogSizeFilter === '' || (p.availableSizes || []).includes(catalogSizeFilter);
-    const matchesColor = catalogColorFilter === '' || (p.availableColors || []).includes(catalogColorFilter);
-    const matchesPrice = catalogPriceFilter === '' || toNum(p.price) <= Number(catalogPriceFilter);
-    return matchesSearch && matchesCategory && matchesSize && matchesColor && matchesPrice;
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-3xl shadow-soft border border-gray-100/50">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input 
-            type="text"
-            placeholder="Buscar produtos ou marcas..."
-            value={catalogSearch || ''}
-            onChange={(e) => setCatalogSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-base font-medium focus:ring-4 focus:ring-champagne/10 focus:border-champagne outline-none transition-all"
-          />
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-          <select 
-            value={catalogCategoryFilter || ''}
-            onChange={(e) => setCatalogCategoryFilter(e.target.value)}
-            className="bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-base font-bold outline-none focus:ring-4 focus:ring-champagne/10 focus:border-champagne min-w-[130px] cursor-pointer transition-all"
-          >
-            <option value="">Categoria</option>
-            {availableCategories.map((cat: any) => <option key={cat} value={cat}>{cat}</option>)}
-          </select>
-          <select 
-            value={catalogSizeFilter || ''}
-            onChange={(e) => setCatalogSizeFilter(e.target.value)}
-            className="bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-base font-bold outline-none focus:ring-4 focus:ring-champagne/10 focus:border-champagne min-w-[110px] cursor-pointer transition-all"
-          >
-            <option value="">Tamanho</option>
-            {availableSizes.map((size: any) => <option key={size} value={size}>{size}</option>)}
-          </select>
-          <select 
-            value={catalogColorFilter || ''}
-            onChange={(e) => setCatalogColorFilter(e.target.value)}
-            className="bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-base font-bold outline-none focus:ring-4 focus:ring-champagne/10 focus:border-champagne min-w-[110px] cursor-pointer transition-all"
-          >
-            <option value="">Cor</option>
-            {availableColors.map((color: any) => <option key={color} value={color}>{color}</option>)}
-          </select>
-          <select 
-            value={catalogPriceFilter || ''}
-            onChange={(e) => setCatalogPriceFilter(e.target.value === '' ? '' : Number(e.target.value))}
-            className="bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 text-base font-bold outline-none focus:ring-4 focus:ring-champagne/10 focus:border-champagne min-w-[130px] cursor-pointer transition-all"
-          >
-            <option value="">Preço até</option>
-            <option value="50">Até R$ 50</option>
-            <option value="100">Até R$ 100</option>
-            <option value="150">Até R$ 150</option>
-            <option value="200">Até R$ 200</option>
-            <option value="300">Até R$ 300</option>
-            <option value="500">Até R$ 500</option>
-          </select>
-          {(catalogSearch || catalogCategoryFilter || catalogSizeFilter || catalogColorFilter || catalogPriceFilter) && (
-            <button 
-              onClick={() => {
-                setCatalogSearch('');
-                setCatalogCategoryFilter('');
-                setCatalogSizeFilter('');
-                setCatalogColorFilter('');
-                setCatalogPriceFilter('');
-              }}
-              className="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0 active:scale-90"
-              title="Limpar filtros"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 products-list">
-        {filteredCatalog.map((product: any) => (
-          <CatalogItem 
-            key={product.id} 
-            product={product} 
-            storeSettings={storeSettings} 
-          />
-        ))}
-      </div>
-      
-      {filteredCatalog.length === 0 && (
-        <div className="text-center py-32 bg-white rounded-3xl border border-dashed border-gray-200">
-          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Package className="w-10 h-10 text-gray-200" />
-          </div>
-          <p className="text-gray-500 font-bold">Nenhum produto encontrado.</p>
-          <p className="text-gray-400 text-sm mt-1">Tente ajustar seus filtros para encontrar o que procura.</p>
-        </div>
-      )}
     </div>
   );
 };
@@ -3398,6 +2958,16 @@ const DashboardContent = ({ dashboard, storeSettings, generatePDF, showNotificat
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <button 
+            onClick={() => {
+              const url = window.location.origin + '/catalogo';
+              navigator.clipboard.writeText(url);
+              showNotification('Link do catálogo copiado!');
+            }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 rounded-lg text-xs font-bold text-white hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+          >
+            <Share2 className="w-4 h-4" /> Compartilhar Catálogo
+          </button>
+          <button 
             onClick={() => generatePDF('dashboard')}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
           >
@@ -4610,6 +4180,32 @@ function AppContent() {
   const [showResetPassword, setShowResetPassword] = useState(false);
 
   useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      
+      const isCatalogPath = path.includes('/catalogo') || hash.includes('catalogo') || params.get('view') === 'catalogo';
+      const isAdminPath = path.includes('/admin') || hash.includes('admin') || path.includes('/sistema') || params.get('view') === 'admin' || params.get('view') === 'sistema';
+      
+      if (path === '/' || path === '') {
+        // Root path redirects to catalog
+        setIsPublicCatalog(true);
+        if (window.location.pathname !== '/catalogo') {
+          window.history.replaceState({}, '', '/catalogo');
+        }
+      } else if (isAdminPath) {
+        setIsPublicCatalog(false);
+        if (path === '/sistema' || path === '/sistema/') {
+           // Optional: you could force a specific tab here if needed
+        }
+      } else if (isCatalogPath) {
+        setIsPublicCatalog(true);
+      } else {
+        setIsPublicCatalog(false);
+      }
+    };
+
     const checkAuth = async () => {
       try {
         // Check if storage is blocked
@@ -4621,20 +4217,10 @@ function AppContent() {
           setIsStorageBlocked(true);
         }
 
-        // Check if URL is /catalogo or has public/catalogo params immediately
-        // This ensures the catalog is accessible even if storage is blocked
-        const params = new URLSearchParams(window.location.search);
-        const path = window.location.pathname;
+        handleLocationChange();
+        
         const savedUser = safeStorage.getItem('user');
         const savedToken = safeStorage.getItem('token');
-        const hasToken = !!savedToken;
-
-        // If it's the root path and no token, default to admin (login)
-        const isAdminPath = path === '/admin' || path.endsWith('/admin') || path === '/' || path === '';
-
-        if (isAdminPath) {
-          setIsPublicCatalog(false);
-        }
         
         if (savedUser && savedToken) {
           try {
@@ -4669,13 +4255,18 @@ function AppContent() {
     };
 
     checkAuth();
+    
+    window.addEventListener('popstate', handleLocationChange);
 
     // Safety timeout: if auth check takes too long, force ready state
     const timeout = setTimeout(() => {
       setIsAuthReady(true);
     }, 5000);
 
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   // Force admin role for the owner email
@@ -7489,88 +7080,12 @@ function AppContent() {
     );
   }
 
-  if (!token) {
-    return renderLoginScreen();
+  if (isPublicCatalog) {
+    return <CatalogPage />;
   }
 
-  if (isPublicCatalog) {
-    return (
-      <div className="min-h-screen bg-gray-50 pb-[calc(5rem+env(safe-area-inset-bottom))]">
-        <header className="bg-midnight border-b border-champagne/20 sticky top-0 z-30 px-4 md:px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-6 flex flex-col gap-4 shadow-xl">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-champagne/30">
-                <img src={storeSettings.logo_url || "/logo.png"} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.src = 'https://picsum.photos/seed/brisa/100/100'; }} />
-              </div>
-              <h1 className="text-xl font-serif font-bold text-champagne">Catálogo {storeSettings.nome_loja}</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              {deferredPrompt && (
-                <button 
-                  onClick={handleInstallApp}
-                  className="bg-champagne text-midnight px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-black/10 hover:bg-champagne-dark transition-all"
-                >
-                  <Download className="w-4 h-4" /> <span className="hidden sm:inline">Instalar App</span>
-                </button>
-              )}
-              {token ? (
-                <button 
-                  onClick={() => {
-                    setIsPublicCatalog(false);
-                    window.history.pushState({}, '', '/admin');
-                  }}
-                  className="text-sm text-champagne font-medium flex items-center gap-1 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <ArrowRight className="w-4 h-4 rotate-180" /> <span className="hidden sm:inline">Painel Administrativo</span>
-                </button>
-              ) : (
-                <button 
-                  onClick={() => {
-                    setIsPublicCatalog(false);
-                    window.history.pushState({}, '', '/admin');
-                  }}
-                  className="text-sm text-champagne/70 font-medium flex items-center gap-1 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <LogIn className="w-4 h-4" /> <span className="hidden sm:inline">Acesso Restrito</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </header>
-
-        <main className="p-4 md:p-8 w-full max-w-7xl mx-auto mt-8">
-          <div className="mb-10 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Nossa Coleção</h2>
-            <p className="text-gray-500 text-sm md:text-base">Confira nossos produtos exclusivos e peça o seu agora mesmo.</p>
-          </div>
-
-          <CatalogContent 
-            products={products}
-            storeSettings={storeSettings}
-            catalogSearch={catalogSearch}
-            setCatalogSearch={setCatalogSearch}
-            catalogCategoryFilter={catalogCategoryFilter}
-            setCatalogCategoryFilter={setCatalogCategoryFilter}
-            catalogSizeFilter={catalogSizeFilter}
-            setCatalogSizeFilter={setCatalogSizeFilter}
-            catalogColorFilter={catalogColorFilter}
-            setCatalogColorFilter={setCatalogColorFilter}
-            catalogPriceFilter={catalogPriceFilter}
-            setCatalogPriceFilter={setCatalogPriceFilter}
-          />
-        </main>
-
-        <footer className="bg-white border-t border-gray-100 py-10 mt-10">
-          <div className="max-w-6xl mx-auto px-6 text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Package className="w-6 h-6 text-midnight" />
-              <span className="font-bold text-xl text-gray-900">{storeSettings.nome_loja}</span>
-            </div>
-            <p className="text-gray-400 text-sm">© {new Date().getFullYear()} {storeSettings.nome_loja} - Todos os direitos reservados.</p>
-          </div>
-        </footer>
-      </div>
-    );
+  if (!token) {
+    return renderLoginScreen();
   }
 
   return (
@@ -7666,7 +7181,7 @@ function AppContent() {
           <div className="grid grid-cols-2 gap-2">
             <button 
               onClick={() => {
-                const url = window.location.origin;
+                const url = window.location.origin + '/catalogo';
                 navigator.clipboard.writeText(url);
                 showNotification('Link do catálogo copiado!');
               }}
@@ -7675,7 +7190,10 @@ function AppContent() {
               <Share2 className="w-3.5 h-3.5" /> Link
             </button>
             <button 
-              onClick={() => setIsPublicCatalog(true)}
+              onClick={() => {
+                setIsPublicCatalog(true);
+                window.history.pushState({}, '', '/catalogo');
+              }}
               className="w-full bg-slate-800 text-slate-300 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-700 transition-all active:scale-95"
             >
               <Smartphone className="w-3.5 h-3.5" /> Loja
@@ -8234,6 +7752,32 @@ function AppContent() {
                       <p className="text-sm font-bold text-gray-900">Logo da Loja</p>
                       <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Clique para alterar</p>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-700">Link Público do Catálogo</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input 
+                          type="text"
+                          readOnly
+                          value={`${window.location.origin}/catalogo`}
+                          className="w-full pl-12 pr-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-600 outline-none cursor-default"
+                        />
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/catalogo`);
+                          showNotification('Link do catálogo copiado!');
+                        }}
+                        className="px-6 py-3 bg-midnight text-champagne rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+                      >
+                        <Copy className="w-4 h-4" /> Copiar
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-400">Compartilhe este link com seus clientes para que eles vejam seus produtos.</p>
                   </div>
 
                   <div className="space-y-2">
