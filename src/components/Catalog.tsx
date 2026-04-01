@@ -691,7 +691,7 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
   );
 };
 
-export const CatalogPage = () => {
+export const CatalogPage = ({ hideAdminLink = false }: { hideAdminLink?: boolean }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({ 
     id: 'default', 
@@ -745,17 +745,19 @@ export const CatalogPage = () => {
             </div>
             <h1 className="text-xl font-serif font-bold text-champagne">Catálogo {storeSettings.nome_loja}</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => {
-                window.history.pushState({}, '', '/sistema');
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }}
-              className="text-sm text-champagne/70 font-medium flex items-center gap-1 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <LogIn className="w-4 h-4" /> <span className="hidden sm:inline">Acesso Restrito</span>
-            </button>
-          </div>
+          {!hideAdminLink && (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  window.history.pushState({}, '', '/sistema');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                className="text-sm text-champagne/70 font-medium flex items-center gap-1 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <LogIn className="w-4 h-4" /> <span className="hidden sm:inline">Acesso Restrito</span>
+              </button>
+            </div>
+          )}
         </div>
       </header>
 

@@ -4164,6 +4164,7 @@ function AppContent() {
   const [financeiroTab, setFinanceiroTab] = useState('gastos');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPublicCatalog, setIsPublicCatalog] = useState(false);
+  const [isCleanCatalog, setIsCleanCatalog] = useState(false);
   
   // Auth State
   const [user, setUser] = useState<User | null>(null);
@@ -4185,24 +4186,26 @@ function AppContent() {
       const hash = window.location.hash.toLowerCase();
       const params = new URLSearchParams(window.location.search);
       
+      const isCleanCatalogPath = path.includes('/catalogo-publico') || hash.includes('catalogo-publico') || params.get('view') === 'catalogo-publico';
       const isCatalogPath = path.includes('/catalogo') || hash.includes('catalogo') || params.get('view') === 'catalogo';
       const isAdminPath = path.includes('/admin') || hash.includes('admin') || path.includes('/sistema') || params.get('view') === 'admin' || params.get('view') === 'sistema';
       
       if (path === '/' || path === '') {
-        // Root path redirects to catalog
-        setIsPublicCatalog(true);
-        if (window.location.pathname !== '/catalogo') {
-          window.history.replaceState({}, '', '/catalogo');
-        }
+        // Root path shows the system (admin/login)
+        setIsPublicCatalog(false);
+        setIsCleanCatalog(false);
       } else if (isAdminPath) {
         setIsPublicCatalog(false);
-        if (path === '/sistema' || path === '/sistema/') {
-           // Optional: you could force a specific tab here if needed
-        }
+        setIsCleanCatalog(false);
+      } else if (isCleanCatalogPath) {
+        setIsPublicCatalog(true);
+        setIsCleanCatalog(true);
       } else if (isCatalogPath) {
         setIsPublicCatalog(true);
+        setIsCleanCatalog(false);
       } else {
         setIsPublicCatalog(false);
+        setIsCleanCatalog(false);
       }
     };
 
@@ -7081,7 +7084,7 @@ function AppContent() {
   }
 
   if (isPublicCatalog) {
-    return <CatalogPage />;
+    return <CatalogPage hideAdminLink={isCleanCatalog} />;
   }
 
   if (!token) {
@@ -7181,9 +7184,9 @@ function AppContent() {
           <div className="grid grid-cols-2 gap-2">
             <button 
               onClick={() => {
-                const url = window.location.origin + '/catalogo';
+                const url = window.location.origin + '/catalogo-publico';
                 navigator.clipboard.writeText(url);
-                showNotification('Link do catálogo copiado!');
+                showNotification('Link do catálogo público copiado!');
               }}
               className="w-full bg-slate-800 text-slate-300 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-700 transition-all active:scale-95"
             >
@@ -7192,7 +7195,9 @@ function AppContent() {
             <button 
               onClick={() => {
                 setIsPublicCatalog(true);
-                window.history.pushState({}, '', '/catalogo');
+                setIsCleanCatalog(true);
+                window.history.pushState({}, '', '/catalogo-publico');
+                window.dispatchEvent(new PopStateEvent('popstate'));
               }}
               className="w-full bg-slate-800 text-slate-300 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-700 transition-all active:scale-95"
             >
@@ -7755,29 +7760,29 @@ function AppContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-gray-700">Link Público do Catálogo</label>
+                    <label className="text-sm font-bold text-gray-700">Link Público do Catálogo (Limpo para Clientes)</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input 
                           type="text"
                           readOnly
-                          value={`${window.location.origin}/catalogo`}
+                          value={`${window.location.origin}/catalogo-publico`}
                           className="w-full pl-12 pr-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-600 outline-none cursor-default"
                         />
                       </div>
                       <button 
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/catalogo`);
-                          showNotification('Link do catálogo copiado!');
+                          navigator.clipboard.writeText(`${window.location.origin}/catalogo-publico`);
+                          showNotification('Link do catálogo público copiado!');
                         }}
                         className="px-6 py-3 bg-midnight text-champagne rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all active:scale-95 flex items-center gap-2"
                       >
                         <Copy className="w-4 h-4" /> Copiar
                       </button>
                     </div>
-                    <p className="text-[10px] text-gray-400">Compartilhe este link com seus clientes para que eles vejam seus produtos.</p>
+                    <p className="text-[10px] text-gray-400">Este link é 100% focado no cliente, sem botões de acesso ao sistema.</p>
                   </div>
 
                   <div className="space-y-2">
