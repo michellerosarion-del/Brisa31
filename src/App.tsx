@@ -88,6 +88,7 @@ import {
   ArrowUp,
   ArrowDown,
   Activity,
+  Bell,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CatalogPage, CatalogContent, Modal } from './components/Catalog';
@@ -620,7 +621,14 @@ const ProductsContent = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest truncate">{p.brand}</p>
-                    <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">REF: {p.code}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">REF: {p.code}</span>
+                      {toNum(p.stock) <= 3 && (
+                        <span className="text-[8px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-100 uppercase tracking-tighter">
+                          Estoque baixo
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <h3 className="font-bold text-slate-900 text-xs leading-tight truncate mb-0.5" title={p.name}>{p.name}</h3>
                   <div className="flex items-center gap-2">
@@ -4163,8 +4171,9 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('administracao');
   const [financeiroTab, setFinanceiroTab] = useState('gastos');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isPublicCatalog, setIsPublicCatalog] = useState(false);
-  const [isCleanCatalog, setIsCleanCatalog] = useState(false);
   
   // Auth State
   const [user, setUser] = useState<User | null>(null);
@@ -4186,26 +4195,18 @@ function AppContent() {
       const hash = window.location.hash.toLowerCase();
       const params = new URLSearchParams(window.location.search);
       
-      const isCleanCatalogPath = path.includes('/catalogo-publico') || hash.includes('catalogo-publico') || params.get('view') === 'catalogo-publico';
       const isCatalogPath = path.includes('/catalogo') || hash.includes('catalogo') || params.get('view') === 'catalogo';
       const isAdminPath = path.includes('/admin') || hash.includes('admin') || path.includes('/sistema') || params.get('view') === 'admin' || params.get('view') === 'sistema';
       
       if (path === '/' || path === '') {
         // Root path shows the system (admin/login)
         setIsPublicCatalog(false);
-        setIsCleanCatalog(false);
       } else if (isAdminPath) {
         setIsPublicCatalog(false);
-        setIsCleanCatalog(false);
-      } else if (isCleanCatalogPath) {
-        setIsPublicCatalog(true);
-        setIsCleanCatalog(true);
       } else if (isCatalogPath) {
         setIsPublicCatalog(true);
-        setIsCleanCatalog(false);
       } else {
         setIsPublicCatalog(false);
-        setIsCleanCatalog(false);
       }
     };
 
@@ -6839,8 +6840,6 @@ function AppContent() {
     { id: 'caixa', label: 'Controle de Caixa', icon: Wallet, adminOnly: true },
     { id: 'relatorios', label: 'Relatórios', icon: BarChart3, adminOnly: true },
     { id: 'precificacao', label: 'Precificação', icon: DollarSign, adminOnly: true },
-    { id: 'perfil', label: 'Meu Perfil', icon: UserCircle },
-    { id: 'settings', label: 'Configurações', icon: SettingsIcon, adminOnly: true },
   ];
 
   const renderLoginScreen = () => {
@@ -7084,7 +7083,7 @@ function AppContent() {
   }
 
   if (isPublicCatalog) {
-    return <CatalogPage hideAdminLink={isCleanCatalog} />;
+    return <CatalogPage user={user} />;
   }
 
   if (!token) {
@@ -7093,21 +7092,173 @@ function AppContent() {
 
   return (
     <>
-      <div className="h-[100dvh] flex flex-col md:flex-row overflow-hidden bg-gray-50 font-sans selection:bg-champagne/30 selection:text-midnight">
-        {/* Mobile Header */}
-      <header className="md:hidden bg-midnight border-b border-champagne/20 px-5 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-5 flex justify-between items-center sticky top-0 z-30 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-champagne/30">
-            <img src={storeSettings.logo_url || "/logo.png"} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.src = 'https://picsum.photos/seed/brisa/100/100'; }} />
+      <div className="h-[100dvh] flex flex-col overflow-hidden bg-gray-50 font-sans selection:bg-champagne/30 selection:text-midnight">
+        {/* Global Header */}
+      <header className="bg-midnight border-b border-champagne/20 px-5 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xl shrink-0">
+        {/* Left Side */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className="p-2 bg-white/10 rounded-xl text-champagne active:scale-90 transition-all hover:bg-white/20 flex items-center gap-2"
+          >
+            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">{isSidebarOpen ? 'Fechar' : 'Menu'}</span>
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-lg overflow-hidden border border-champagne/30 hidden sm:flex">
+              <img src={storeSettings.logo_url || "/logo.png"} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.src = 'https://picsum.photos/seed/brisa/100/100'; }} />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-serif font-bold text-sm md:text-base text-champagne leading-tight tracking-tight truncate max-w-[120px] md:max-w-none">
+                {storeSettings.nome_loja}
+              </span>
+              <span className="text-[9px] font-bold text-champagne/50 uppercase tracking-widest leading-none hidden md:block">Sistema ERP</span>
+            </div>
           </div>
-          <span className="font-serif font-bold text-lg text-champagne tracking-tight">{storeSettings.nome_loja}</span>
         </div>
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-          className="p-2.5 bg-white/10 rounded-xl text-champagne active:scale-90 transition-all"
-        >
-          {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+
+        {/* Right Side */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Notifications */}
+          <div className="relative">
+            <button 
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className="p-2 text-champagne/70 hover:text-champagne hover:bg-white/10 rounded-xl transition-all relative group"
+            >
+              <Bell className="w-5 h-5" />
+              {(dashboard?.lowStock || []).length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-midnight" />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {isNotificationsOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsNotificationsOpen(false)} 
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 py-2"
+                  >
+                    <div className="px-4 py-3 border-b border-gray-50 mb-1">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Notificações</p>
+                    </div>
+                    
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {(dashboard?.lowStock || []).length > 0 ? (
+                        dashboard.lowStock.map((p: any) => (
+                          <button 
+                            key={p.id}
+                            onClick={() => {
+                              setActiveTab('produtos');
+                              setIsNotificationsOpen(false);
+                            }}
+                            className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                          >
+                            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center shrink-0">
+                              <AlertTriangle className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="text-xs font-bold text-gray-900 leading-tight">Estoque Baixo</p>
+                              <p className="text-[10px] text-gray-500 line-clamp-2">{p.name} possui apenas {p.stock} unidades.</p>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-8 text-center">
+                          <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Bell className="w-5 h-5 text-gray-300" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-500">Sem notificações</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* User Profile Dropdown */}
+          <div className="relative">
+            <button 
+              onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+              className="flex items-center gap-2 p-1.5 md:p-2 bg-white/5 hover:bg-white/10 border border-champagne/10 rounded-xl transition-all active:scale-95 group"
+            >
+              <div className="w-7 h-7 md:w-8 md:h-8 bg-champagne/20 rounded-lg flex items-center justify-center text-champagne font-bold text-xs md:text-sm border border-champagne/30">
+                {user?.name?.charAt(0).toUpperCase() || <UserIcon className="w-4 h-4" />}
+              </div>
+              <div className="hidden md:flex flex-col items-start text-left">
+                <span className="text-xs font-bold text-champagne leading-none">{user?.name?.split(' ')[0]}</span>
+                <span className="text-[9px] font-medium text-champagne/50 uppercase tracking-wider">{user?.role === 'admin' ? 'Admin' : 'Vendedor'}</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-champagne/50 transition-transform duration-300 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {isUserDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsUserDropdownOpen(false)} 
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 py-2"
+                  >
+                    <div className="px-4 py-3 border-b border-gray-50 mb-1">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Minha Conta</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{user?.name}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{user?.login}</p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        setActiveTab('perfil');
+                        setIsUserDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-midnight transition-colors"
+                    >
+                      <UserIcon className="w-4 h-4 text-gray-400" />
+                      Perfil
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        setActiveTab('settings');
+                        setIsUserDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-midnight transition-colors"
+                    >
+                      <SettingsIcon className="w-4 h-4 text-gray-400" />
+                      Configurações
+                    </button>
+                    
+                    <div className="h-px bg-gray-50 my-1" />
+                    
+                    <button 
+                      onClick={() => {
+                        handleLogout();
+                        setIsUserDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair do Sistema
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </header>
 
       {/* Sidebar Backdrop */}
@@ -7118,28 +7269,34 @@ function AppContent() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 md:hidden"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30"
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 flex flex-col shadow-2xl md:shadow-none
-        pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="p-6 hidden md:flex items-center gap-3 mb-2 shrink-0 border-b border-slate-800">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0">
-            <img src={storeSettings.logo_url || "/logo.png"} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.src = 'https://picsum.photos/seed/brisa/100/100'; }} />
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar */}
+        <aside className={`
+          fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 border-r border-slate-800 transform transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col shadow-2xl
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          <div className="p-6 flex items-center gap-3 mb-2 shrink-0 border-b border-slate-800 bg-slate-900/50">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg overflow-hidden shrink-0">
+              <img src={storeSettings.logo_url || "/logo.png"} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.src = 'https://picsum.photos/seed/brisa/100/100'; }} />
+            </div>
+            <div className="min-w-0">
+              <span className="font-sans font-bold text-lg text-white tracking-tight truncate block">{storeSettings.nome_loja}</span>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider truncate">
+                {user?.role === 'admin' ? 'Administrador' : 'Vendedor'}
+              </p>
+            </div>
+            <button 
+              onClick={() => setIsSidebarOpen(false)}
+              className="ml-auto p-2 text-slate-500 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <div className="min-w-0">
-            <span className="font-sans font-bold text-lg text-white tracking-tight truncate block">{storeSettings.nome_loja}</span>
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider truncate">
-              {user?.role === 'admin' ? 'Administrador' : 'Vendedor'}
-            </p>
-          </div>
-        </div>
 
         <nav className="px-3 space-y-1 flex-1 overflow-y-auto py-4 custom-scrollbar">
           <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Menu Principal</p>
@@ -7184,9 +7341,9 @@ function AppContent() {
           <div className="grid grid-cols-2 gap-2">
             <button 
               onClick={() => {
-                const url = window.location.origin + '/catalogo-publico';
+                const url = window.location.origin + '/catalogo';
                 navigator.clipboard.writeText(url);
-                showNotification('Link do catálogo público copiado!');
+                showNotification('Link do catálogo copiado!');
               }}
               className="w-full bg-slate-800 text-slate-300 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-700 transition-all active:scale-95"
             >
@@ -7195,8 +7352,7 @@ function AppContent() {
             <button 
               onClick={() => {
                 setIsPublicCatalog(true);
-                setIsCleanCatalog(true);
-                window.history.pushState({}, '', '/catalogo-publico');
+                window.history.pushState({}, '', '/catalogo');
                 window.dispatchEvent(new PopStateEvent('popstate'));
               }}
               className="w-full bg-slate-800 text-slate-300 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-700 transition-all active:scale-95"
@@ -7225,12 +7381,12 @@ function AppContent() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full bg-slate-50 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full bg-slate-50 pb-[calc(1rem+env(safe-area-inset-bottom))] relative">
         <div className="w-full max-w-[1400px] mx-auto space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">ERP SYSTEM</span>
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">PAINEL</span>
                 <ChevronRight className="w-3 h-3 text-slate-300" />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   {menuItems.find(item => item.id === activeTab)?.label || activeTab}
@@ -7760,29 +7916,29 @@ function AppContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-gray-700">Link Público do Catálogo (Limpo para Clientes)</label>
+                    <label className="text-sm font-bold text-gray-700">Link Público do Catálogo</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input 
                           type="text"
                           readOnly
-                          value={`${window.location.origin}/catalogo-publico`}
+                          value={`${window.location.origin}/catalogo`}
                           className="w-full pl-12 pr-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-600 outline-none cursor-default"
                         />
                       </div>
                       <button 
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/catalogo-publico`);
-                          showNotification('Link do catálogo público copiado!');
+                          navigator.clipboard.writeText(`${window.location.origin}/catalogo`);
+                          showNotification('Link do catálogo copiado!');
                         }}
                         className="px-6 py-3 bg-midnight text-champagne rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all active:scale-95 flex items-center gap-2"
                       >
-                        <Copy className="w-4 h-4" /> Copiar
+                        <Copy className="w-4 h-4" /> Copiar link do catálogo
                       </button>
                     </div>
-                    <p className="text-[10px] text-gray-400">Este link é 100% focado no cliente, sem botões de acesso ao sistema.</p>
+                    <p className="text-[10px] text-gray-400">Compartilhe este link com seus clientes para que eles vejam seus produtos.</p>
                   </div>
 
                   <div className="space-y-2">
@@ -7957,6 +8113,7 @@ function AppContent() {
         </div>
       </main>
     </div>
+  </div>
 
     {/* Toast Notifications */}
       <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 pointer-events-none">

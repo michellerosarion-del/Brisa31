@@ -17,7 +17,8 @@ import {
   AlertCircle,
   Phone,
   AlertTriangle,
-  LogIn
+  LogIn,
+  LayoutDashboard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toNum, formatCurrency } from '../lib/utils';
@@ -691,7 +692,7 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
   );
 };
 
-export const CatalogPage = ({ hideAdminLink = false }: { hideAdminLink?: boolean }) => {
+export const CatalogPage = ({ user = null }: { user?: any }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({ 
     id: 'default', 
@@ -745,19 +746,19 @@ export const CatalogPage = ({ hideAdminLink = false }: { hideAdminLink?: boolean
             </div>
             <h1 className="text-xl font-serif font-bold text-champagne">Catálogo {storeSettings.nome_loja}</h1>
           </div>
-          {!hideAdminLink && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {user && (
               <button 
                 onClick={() => {
                   window.history.pushState({}, '', '/sistema');
                   window.dispatchEvent(new PopStateEvent('popstate'));
                 }}
-                className="text-sm text-champagne/70 font-medium flex items-center gap-1 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                className="text-sm text-champagne/70 font-medium flex items-center gap-1 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors border border-champagne/20"
               >
-                <LogIn className="w-4 h-4" /> <span className="hidden sm:inline">Acesso Restrito</span>
+                <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Voltar ao Painel</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </header>
 
