@@ -737,7 +737,7 @@ export const CatalogPage = ({ user = null }: { user?: any }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-[100dvh] bg-gray-50 pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <header className="bg-midnight border-b border-champagne/20 sticky top-0 z-30 px-4 md:px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-6 flex flex-col gap-4 shadow-xl">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">

@@ -17,11 +17,15 @@
 
 @layer base {
   body {
-    @apply font-sans text-slate-800 bg-[#f8f9fa] text-sm md:text-[14px] leading-normal;
+    @apply font-sans text-slate-800 bg-[#f8f9fa] text-sm md:text-[14px] leading-normal overflow-x-hidden;
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans font-semibold tracking-tight text-slate-900;
+  }
+
+  input, select, textarea {
+    @apply text-base md:text-sm;
   }
 }
 
@@ -43,7 +47,7 @@
   }
 
   .input-modern {
-    @apply w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all duration-200 font-medium placeholder:text-slate-400 text-slate-900 text-sm min-h-[38px];
+    @apply w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all duration-200 font-medium placeholder:text-slate-400 text-slate-900 text-base md:text-sm min-h-[38px];
   }
 
   .shadow-soft {

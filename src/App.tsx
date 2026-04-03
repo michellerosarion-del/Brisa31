@@ -576,15 +576,15 @@ const ProductsContent = ({
             <input 
               type="text" 
               placeholder="Buscar produto..." 
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-base md:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               value={searchTerm || ''}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative group w-full md:min-w-[180px]">
+          <div className="relative group w-full md:w-auto md:min-w-[180px]">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
             <select 
-              className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer appearance-none"
+              className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-base md:text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer appearance-none"
               value={categoryFilter || ''}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
@@ -805,7 +805,7 @@ const SalesContent = ({
             />
           </div>
           <div className="flex flex-wrap gap-4">
-            <div className="relative group min-w-[160px]">
+            <div className="relative group w-full sm:w-auto sm:min-w-[160px]">
               <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-midnight transition-colors" />
               <input 
                 type="date" 
@@ -817,7 +817,7 @@ const SalesContent = ({
                 }}
               />
             </div>
-            <div className="relative group min-w-[180px]">
+            <div className="relative group w-full sm:w-auto sm:min-w-[180px]">
               <CreditCard className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-midnight transition-colors" />
               <select 
                 className="w-full pl-14 pr-10 py-4 bg-gray-50/50 border border-gray-100 rounded-[1.5rem] text-base font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-midnight/5 focus:border-midnight/10 transition-all cursor-pointer appearance-none"
@@ -832,7 +832,7 @@ const SalesContent = ({
               </select>
               <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
-            <div className="relative group min-w-[180px]">
+            <div className="relative group w-full sm:w-auto sm:min-w-[180px]">
               <UserIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-midnight transition-colors" />
               <select 
                 className="w-full pl-14 pr-10 py-4 bg-gray-50/50 border border-gray-100 rounded-[1.5rem] text-base font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-midnight/5 focus:border-midnight/10 transition-all cursor-pointer appearance-none"
@@ -846,7 +846,7 @@ const SalesContent = ({
               </select>
               <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
-            <div className="relative group min-w-[160px]">
+            <div className="relative group w-full sm:w-auto sm:min-w-[160px]">
               <CheckCircle2 className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-midnight transition-colors" />
               <select 
                 className="w-full pl-14 pr-10 py-4 bg-gray-50/50 border border-gray-100 rounded-[1.5rem] text-base font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-midnight/5 focus:border-midnight/10 transition-all cursor-pointer appearance-none"
@@ -7035,7 +7035,7 @@ function AppContent() {
 
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-midnight flex items-center justify-center relative overflow-hidden">
+      <div className="min-h-[100dvh] bg-midnight flex items-center justify-center relative overflow-hidden p-4">
         <div className="absolute inset-0 z-0">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-champagne/10 rounded-full blur-[120px] animate-pulse" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-champagne/5 rounded-full blur-[120px] animate-pulse delay-700" />
@@ -7094,7 +7094,7 @@ function AppContent() {
     <>
       <div className="h-[100dvh] flex flex-col overflow-hidden bg-gray-50 font-sans selection:bg-champagne/30 selection:text-midnight">
         {/* Global Header */}
-      <header className="bg-midnight border-b border-champagne/20 px-5 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xl shrink-0">
+      <header className="bg-midnight border-b border-champagne/20 px-5 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 flex items-center justify-between sticky top-0 z-30 shadow-xl shrink-0">
         {/* Left Side */}
         <div className="flex items-center gap-4">
           <button 
@@ -7278,6 +7278,7 @@ function AppContent() {
         {/* Sidebar */}
         <aside className={`
           fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 border-r border-slate-800 transform transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col shadow-2xl
+          pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           <div className="p-6 flex items-center gap-3 mb-2 shrink-0 border-b border-slate-800 bg-slate-900/50">
@@ -8334,11 +8335,11 @@ function AppContent() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Avaliação (0-5)</label>
-                      <input name="rating" type="number" step="0.1" min="0" max="5" defaultValue={0} className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" />
+                      <input name="rating" type="number" step="0.1" min="0" max="5" defaultValue={0} className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Descrição Curta</label>
-                      <input name="short_description" placeholder="Ex: Tecido leve e confortável" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" />
+                      <input name="short_description" placeholder="Ex: Tecido leve e confortável" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" />
                     </div>
                   </div>
                 </div>
@@ -8536,7 +8537,7 @@ function AppContent() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Estoque Atual</label>
-                    <input name="stock" type="number" defaultValue={editingItem?.stock} placeholder="Quantidade" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" required />
+                    <input name="stock" type="number" defaultValue={editingItem?.stock} placeholder="Quantidade" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
                   </div>
                 </div>
               )}
@@ -8544,31 +8545,31 @@ function AppContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Custo (R$)</label>
-                <input name="cost" type="text" inputMode="decimal" defaultValue={editingItem?.cost} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" required />
+                <input name="cost" type="text" inputMode="decimal" defaultValue={editingItem?.cost} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
               </div>
               <div className="space-y-1">
                 <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Preço Base (R$)</label>
-                <input name="price" type="text" inputMode="decimal" defaultValue={editingItem?.price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" required />
+                <input name="price" type="text" inputMode="decimal" defaultValue={editingItem?.price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">À Vista (R$)</label>
-                <input name="cash_price" type="text" inputMode="decimal" defaultValue={editingItem?.cash_price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" />
+                <input name="cash_price" type="text" inputMode="decimal" defaultValue={editingItem?.cash_price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">No Cartão (R$)</label>
-                <input name="card_price" type="text" inputMode="decimal" defaultValue={editingItem?.card_price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" />
+                <input name="card_price" type="text" inputMode="decimal" defaultValue={editingItem?.card_price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Promo (R$)</label>
-                <input name="promo_price" type="text" inputMode="decimal" defaultValue={editingItem?.promo_price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" />
+                <input name="promo_price" type="text" inputMode="decimal" defaultValue={editingItem?.promo_price} placeholder="0,00" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" />
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1">
                 <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Estoque Mínimo para Alerta</label>
-                <input name="min_stock" type="number" defaultValue={editingItem?.min_stock || 5} placeholder="Ex: 5" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" required />
+                <input name="min_stock" type="number" defaultValue={editingItem?.min_stock || 5} placeholder="Ex: 5" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
               </div>
             </div>
             <div className="space-y-4">
@@ -8602,11 +8603,11 @@ function AppContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Avaliação (0-5)</label>
-                  <input name="rating" type="number" step="0.1" min="0" max="5" defaultValue={editingItem?.rating || 0} className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" />
+                  <input name="rating" type="number" step="0.1" min="0" max="5" defaultValue={editingItem?.rating || 0} className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Descrição Curta</label>
-                  <input name="short_description" defaultValue={editingItem?.short_description} placeholder="Ex: Tecido leve e confortável" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm md:text-xs" />
+                  <input name="short_description" defaultValue={editingItem?.short_description} placeholder="Ex: Tecido leve e confortável" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" />
                 </div>
               </div>
             </div>
@@ -8910,14 +8911,14 @@ function AppContent() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] md:text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Cliente</label>
-                    <select name="customer_id" className="w-full px-3 py-3 md:py-2 rounded-xl border border-gray-100 focus:border-midnight outline-none text-sm md:text-xs bg-gray-50/50">
+                    <select name="customer_id" className="w-full px-3 py-3 md:py-2 rounded-xl border border-gray-100 focus:border-midnight outline-none text-base md:text-sm bg-gray-50/50">
                       <option value="">Consumidor Final</option>
                       {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] md:text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Pagamento</label>
-                    <select name="payment_method" className="w-full px-3 py-3 md:py-2 rounded-xl border border-gray-100 focus:border-midnight outline-none text-sm md:text-xs bg-gray-50/50">
+                    <select name="payment_method" className="w-full px-3 py-3 md:py-2 rounded-xl border border-gray-100 focus:border-midnight outline-none text-base md:text-sm bg-gray-50/50">
                       <option value="PIX">PIX</option>
                       <option value="Dinheiro">Dinheiro</option>
                       <option value="Cartão">Cartão</option>
@@ -9190,14 +9191,14 @@ function AppContent() {
                       + Novo
                     </button>
                   </div>
-                  <select name="customer_id" defaultValue={editingItem?.customer_id} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm bg-white">
+                  <select name="customer_id" defaultValue={editingItem?.customer_id} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base bg-white">
                     <option value="">Consumidor Final</option>
                     {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Vendedor</label>
-                  <select name="seller_id" defaultValue={editingItem?.seller_id} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-sm bg-white">
+                  <select name="seller_id" defaultValue={editingItem?.seller_id} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base bg-white">
                     <option value="">Sem Vendedor</option>
                     {sellers.filter((s: any) => s.status === 'ativo').map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
