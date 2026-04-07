@@ -109,9 +109,25 @@ import {
   serverTimestamp,
   increment,
   Timestamp,
-  DocumentReference
+  DocumentReference,
+  limit,
+  startAfter,
+  getDoc,
 } from 'firebase/firestore';
-import { db, auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, handleFirestoreError, OperationType } from './firebase';
+import { 
+  db, 
+  auth, 
+  handleFirestoreError, 
+  OperationType,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+  updatePassword
+} from './firebase';
+import type { User as FirebaseUser } from './firebase';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -192,6 +208,8 @@ type Product = {
   is_featured?: boolean;
   is_best_seller?: boolean;
   is_new?: boolean;
+  is_low_stock_manual?: boolean;
+  is_promo_manual?: boolean;
   rating?: number;
   short_description?: string;
   image_url: string;
@@ -283,7 +301,7 @@ type Ad = {
   date: string;
 };
 
-type User = {
+type AppUser = {
   id: string;
   login: string;
   name: string;
@@ -298,6 +316,8 @@ type StoreSettings = {
   monthly_goal?: number;
   logo_url?: string;
   card_fee?: number;
+  low_stock_alert_enabled?: boolean;
+  low_stock_threshold?: number;
 };
 
 type DashboardData = {
@@ -565,7 +585,11 @@ const ProductsContent = ({
   formatCurrency, 
   toNum, 
   onPromote, 
-  getCssColor 
+  getCssColor,
+  storeSettings,
+  hasMoreProducts,
+  isLoadingMore,
+  onLoadMore
 }: any) => {
   return (
     <div className="space-y-4">
@@ -623,11 +647,21 @@ const ProductsContent = ({
                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest truncate">{p.brand}</p>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">REF: {p.code}</span>
-                      {toNum(p.stock) <= 3 && (
-                        <span className="text-[8px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-100 uppercase tracking-tighter">
-                          Estoque baixo
-                        </span>
-                      )}
+                      {(() => {
+                        const totalStock = p.has_variations && p.variations 
+                          ? p.variations.reduce((sum: number, v: any) => sum + toNum(v.stock), 0)
+                          : toNum(p.stock);
+                        const threshold = p.min_stock !== undefined ? toNum(p.min_stock) : toNum(storeSettings.low_stock_threshold || 3);
+                        
+                        if (storeSettings.low_stock_alert_enabled && totalStock > 0 && totalStock <= threshold) {
+                          return (
+                            <span className="text-[8px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-100 uppercase tracking-tighter">
+                              Estoque baixo
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                   <h3 className="font-bold text-slate-900 text-xs leading-tight truncate mb-0.5" title={p.name}>{p.name}</h3>
@@ -707,7 +741,7 @@ const ProductsContent = ({
                 
                 <div className="flex items-center justify-between pt-1 border-t border-slate-200/50">
                   <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Estoque Total</span>
-                  <span className={`text-[10px] font-bold ${toNum(p.stock) <= toNum(p.min_stock) ? 'text-amber-600' : 'text-slate-900'}`}>
+                  <span className={`text-[10px] font-bold ${(storeSettings.low_stock_alert_enabled && toNum(p.stock) <= (p.min_stock !== undefined ? toNum(p.min_stock) : toNum(storeSettings.low_stock_threshold || 3))) ? 'text-amber-600' : 'text-slate-900'}`}>
                     {p.stock} <span className="text-[8px] font-medium opacity-50">un</span>
                   </span>
                 </div>
@@ -742,6 +776,28 @@ const ProductsContent = ({
           </motion.div>
         ))}
       </div>
+
+      {hasMoreProducts && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {isLoadingMore ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Carregando...
+              </>
+            ) : (
+              <>
+                <Plus className="w-3 h-3" />
+                Carregar Mais
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {filteredProducts.length === 0 && (
         <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200 shadow-sm">
@@ -2952,7 +3008,7 @@ const FinancialSummary = ({ dashboard }: { dashboard: any }) => {
   );
 };
 
-const DashboardContent = ({ dashboard, storeSettings, generatePDF, showNotification, showConfirm, onPromote, onRestock }: any) => {
+const DashboardContent = ({ dashboard, products, storeSettings, generatePDF, showNotification, showConfirm, onPromote, onRestock }: any) => {
   if (!dashboard) return null;
 
   const COLORS = ['#1e293b', '#10b981', '#f59e0b', '#6366f1', '#0ea5e9', '#ef4444'];
@@ -3342,6 +3398,7 @@ const ProfitReportContent = ({
   expenses, 
   ads, 
   sellers, 
+  storeSettings,
   calculateDashboardData,
   showNotification, 
   showConfirm,
@@ -3917,11 +3974,11 @@ const ProfitReportContent = ({
                   <td className="px-10 md:px-16 py-6 text-right">
                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border shadow-sm transition-all ${
                       toNum(p.stock) <= 0 ? 'bg-rose-100 text-rose-700 border-rose-200' :
-                      toNum(p.stock) <= toNum(p.min_stock) ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                      (storeSettings.low_stock_alert_enabled && toNum(p.stock) <= (p.min_stock !== undefined ? toNum(p.min_stock) : toNum(storeSettings.low_stock_threshold || 3))) ? 'bg-amber-100 text-amber-700 border-amber-200' :
                       'bg-emerald-100 text-emerald-700 border-emerald-200'
                     }`}>
                       {toNum(p.stock) <= 0 ? 'ESGOTADO' :
-                       toNum(p.stock) <= toNum(p.min_stock) ? 'BAIXO' : 'OK'}
+                       (storeSettings.low_stock_alert_enabled && toNum(p.stock) <= (p.min_stock !== undefined ? toNum(p.min_stock) : toNum(storeSettings.low_stock_threshold || 3))) ? 'BAIXO' : 'OK'}
                     </span>
                   </td>
                 </tr>
@@ -4176,18 +4233,13 @@ function AppContent() {
   const [isPublicCatalog, setIsPublicCatalog] = useState(false);
   
   // Auth State
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [token, setToken] = useState<string | null>(safeStorage.getItem('token'));
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isStorageBlocked, setIsStorageBlocked] = useState(false);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
   const [forgotPasswordLogin, setForgotPasswordLogin] = useState('');
-  const [forgotPasswordNewPass, setForgotPasswordNewPass] = useState('');
-  const [forgotPasswordConfirmPass, setForgotPasswordConfirmPass] = useState('');
   const [isSearchingUser, setIsSearchingUser] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [foundUserForReset, setFoundUserForReset] = useState<any>(null);
-  const [showResetPassword, setShowResetPassword] = useState(false);
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -4223,42 +4275,61 @@ function AppContent() {
 
         handleLocationChange();
         
-        const savedUser = safeStorage.getItem('user');
-        const savedToken = safeStorage.getItem('token');
-        
-        if (savedUser && savedToken) {
-          try {
-            const parsedUser = JSON.parse(savedUser);
-            
-            // Verify if user still exists in database
-            const userDoc = await getDocs(query(collection(db, 'usuarios'), where('login', '==', parsedUser.login)));
-            
-            if (!userDoc.empty) {
-              setUser(parsedUser);
-              setToken(savedToken);
-            } else {
-              // User no longer exists, clear storage
-              safeStorage.removeItem('user');
-              safeStorage.removeItem('token');
+        // Use Firebase Auth listener
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (firebaseUser) {
+            try {
+              // Fetch user metadata from Firestore
+              const userDoc = await getDoc(doc(db, 'usuarios', firebaseUser.uid));
+              
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const appUser: AppUser = {
+                  id: firebaseUser.uid,
+                  login: firebaseUser.email || '',
+                  name: userData.name || firebaseUser.displayName || firebaseUser.email || '',
+                  role: userData.role || 'seller'
+                };
+                setUser(appUser);
+                setToken('firebase-auth-token');
+              } else {
+                // If user exists in Auth but not in Firestore, create a default entry
+                const role = firebaseUser.email === 'michellerosario.n@gmail.com' ? 'admin' : 'seller';
+                const appUser: AppUser = {
+                  id: firebaseUser.uid,
+                  login: firebaseUser.email || '',
+                  name: firebaseUser.displayName || firebaseUser.email || '',
+                  role: role
+                };
+                await setDoc(doc(db, 'usuarios', firebaseUser.uid), {
+                  login: firebaseUser.email,
+                  name: appUser.name,
+                  role: role,
+                  createdAt: serverTimestamp()
+                });
+                setUser(appUser);
+                setToken('firebase-auth-token');
+              }
+            } catch (e) {
+              console.error('Error fetching user metadata:', e);
               setUser(null);
               setToken(null);
             }
-          } catch (e) {
-            console.error('Error parsing saved auth:', e);
-            safeStorage.removeItem('user');
-            safeStorage.removeItem('token');
+          } else {
             setUser(null);
             setToken(null);
           }
-        }
+          setIsAuthReady(true);
+        });
+
+        return unsubscribe;
       } catch (error) {
         console.error('Auth check failed:', error);
-      } finally {
         setIsAuthReady(true);
       }
     };
 
-    checkAuth();
+    const unsubscribeAuth = checkAuth();
     
     window.addEventListener('popstate', handleLocationChange);
 
@@ -4270,6 +4341,13 @@ function AppContent() {
     return () => {
       clearTimeout(timeout);
       window.removeEventListener('popstate', handleLocationChange);
+      if (typeof unsubscribeAuth === 'function') {
+        (unsubscribeAuth as any)();
+      } else if (unsubscribeAuth instanceof Promise) {
+        unsubscribeAuth.then(unsub => {
+          if (typeof unsub === 'function') unsub();
+        });
+      }
     };
   }, []);
 
@@ -4286,6 +4364,9 @@ function AppContent() {
 
   // Data State
   const [products, setProducts] = useState<Product[]>([]);
+  const [lastProductDoc, setLastProductDoc] = useState<any>(null);
+  const [hasMoreProducts, setHasMoreProducts] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [batchSizes, setBatchSizes] = useState<Record<string, number>>({ 'P': 0, 'M': 0, 'G': 0, 'GG': 0 });
   const [batchColors, setBatchColors] = useState('');
@@ -4331,7 +4412,9 @@ function AppContent() {
     mensagem_padrao_whatsapp: 'Olá! Tenho interesse neste produto: {nome_produto} - R$ {preco_produto}',
     monthly_goal: 10000,
     logo_url: '',
-    card_fee: 3.5
+    card_fee: 3.5,
+    low_stock_alert_enabled: true,
+    low_stock_threshold: 3
   });
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
 
@@ -4622,7 +4705,15 @@ function AppContent() {
     const profitMargin = fin.margem;
     const totalProfit = fin.vendas - fin.custo; // Lucro Bruto for internal use if needed
     
-    const lowStock = products.filter(p => toNum(p.stock) <= toNum(p.min_stock));
+    const lowStock = storeSettings.low_stock_alert_enabled 
+      ? products.filter(p => {
+          const totalStock = p.has_variations && p.variations 
+            ? p.variations.reduce((sum: number, v: any) => sum + toNum(v.stock), 0)
+            : toNum(p.stock);
+          const threshold = p.min_stock !== undefined ? toNum(p.min_stock) : toNum(storeSettings.low_stock_threshold || 3);
+          return totalStock > 0 && totalStock <= threshold;
+        })
+      : [];
     
     const productStats: Record<string, { id: string; name: string; quantity: number; revenue: number; cost: number; profit: number }> = {};
     const sizeSales: Record<string, number> = {};
@@ -4829,8 +4920,19 @@ function AppContent() {
       .sort((a, b) => b.sales_last_30 - a.sales_last_30)
       .slice(0, 5);
 
-    const totalStockCost = products.reduce((acc, p) => acc + (toNum(p.cost) * toNum(p.stock)), 0);
-    const totalStockValue = products.reduce((acc, p) => acc + (toNum(p.price) * toNum(p.stock)), 0);
+    const totalStockCost = products.reduce((acc, p) => {
+      const totalStock = p.has_variations && p.variations 
+        ? p.variations.reduce((sum: number, v: any) => sum + toNum(v.stock), 0)
+        : toNum(p.stock);
+      return acc + (toNum(p.cost) * totalStock);
+    }, 0);
+
+    const totalStockValue = products.reduce((acc, p) => {
+      const totalStock = p.has_variations && p.variations 
+        ? p.variations.reduce((sum: number, v: any) => sum + toNum(v.stock), 0)
+        : toNum(p.stock);
+      return acc + (toNum(p.price) * totalStock);
+    }, 0);
 
     const staleProducts = products
       .filter(p => p.stock > 0 && !recentProductSales[p.name])
@@ -4917,6 +5019,40 @@ function AppContent() {
     };
   }, [storeSettings]);
 
+  const fetchProducts = useCallback(async (isFirstPage = false) => {
+    if (isFirstPage) {
+      setProducts([]);
+      setLastProductDoc(null);
+      setHasMoreProducts(true);
+    } else if (!hasMoreProducts || isLoadingMore) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    try {
+      const colRef = collection(db, 'produtos');
+      let q = query(colRef, orderBy('name'), limit(10));
+      
+      if (!isFirstPage && lastProductDoc) {
+        q = query(colRef, orderBy('name'), startAfter(lastProductDoc), limit(10));
+      }
+
+      const snap = await getDocs(q);
+      const newProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      
+      setProducts(prev => isFirstPage ? newProducts : [...prev, ...newProducts]);
+      setLastProductDoc(snap.docs[snap.docs.length - 1]);
+      setHasMoreProducts(snap.docs.length === 10);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      if (!err.message?.includes('Quota exceeded')) {
+        handleFirestoreError(err, OperationType.LIST, 'produtos');
+      }
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [lastProductDoc, hasMoreProducts, isLoadingMore]);
+
   useEffect(() => {
     if (!isAuthReady) return;
 
@@ -4924,53 +5060,84 @@ function AppContent() {
 
     const setupListeners = () => {
       // Public listeners (needed for catalog)
-      const unsubProducts = onSnapshot(collection(db, 'produtos'), 
-        (snap) => {
-          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-          setProducts(data);
-        },
-        (err) => handleFirestoreError(err, OperationType.LIST, 'produtos')
-      );
-      unsubscribes.push(unsubProducts);
-
+      // We now fetch products manually with pagination to save reads
+      // But we still listen to config for real-time store settings
       const unsubConfig = onSnapshot(collection(db, 'configuracoes'), 
         (snap) => {
           if (!snap.empty) {
             setStoreSettings({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
           }
         },
-        (err) => handleFirestoreError(err, OperationType.LIST, 'configuracoes')
+        (err) => {
+          if (!err.message?.includes('Quota exceeded')) {
+            handleFirestoreError(err, OperationType.LIST, 'configuracoes');
+          }
+        }
       );
       unsubscribes.push(unsubConfig);
 
-      if (!token) return;
+      // Initial product fetch
+      // If admin, we use the onSnapshot listener below instead of paginated fetch
+      if (user?.role !== 'admin') {
+        fetchProducts(true);
+      }
 
-      // Private listeners
+      // CRITICAL OPTIMIZATION: Only load private data if we have a token AND we are NOT in public catalog mode
+      if (!token || isPublicCatalog) return;
+
+      // Private listeners with date filters to reduce historical data reads
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const threeMonthsAgoStr = threeMonthsAgo.toISOString().split('T')[0];
+
       const collections = [
-        { name: 'clientes', setter: setCustomers },
-        { name: 'vendas', setter: setSales },
-        { name: 'gastos', setter: setExpenses },
-        { name: 'anuncios', setter: setAds },
-        { 
-          name: 'vendedores', 
-          setter: (data: any[]) => {
-            setSellers(data);
-          } 
-        },
-        { name: 'fornecedores', setter: setSuppliers },
-        { name: 'pedidos_fornecedor', setter: setOrders },
-        { name: 'compras_estoque', setter: setPurchaseHistory },
-        { name: 'estoque_movimentacoes', setter: setStockMovements },
-        { name: 'usuarios', setter: setSystemUsers }
+        { name: 'clientes', setter: setCustomers, filter: null },
+        { name: 'vendas', setter: setSales, filter: where('date', '>=', oneYearAgoStr) },
+        { name: 'gastos', setter: setExpenses, filter: where('date', '>=', oneYearAgoStr) },
+        { name: 'anuncios', setter: setAds, filter: where('date', '>=', oneYearAgoStr) },
+        { name: 'vendedores', setter: setSellers, filter: null },
+        { name: 'fornecedores', setter: setSuppliers, filter: null },
+        { name: 'pedidos_fornecedor', setter: setOrders, filter: where('date', '>=', oneYearAgoStr) },
+        { name: 'compras_estoque', setter: setPurchaseHistory, filter: where('date', '>=', oneYearAgoStr) },
+        { name: 'estoque_movimentacoes', setter: setStockMovements, filter: where('date', '>=', threeMonthsAgoStr) },
+        { name: 'usuarios', setter: setSystemUsers, filter: null }
       ];
 
+      // If admin, also listen to ALL products for accurate reports
+      if (user?.role === 'admin') {
+        const unsubAllProducts = onSnapshot(collection(db, 'produtos'), 
+          (snap) => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+            setProducts(data);
+            setHasMoreProducts(false); // No need for pagination if we have everything
+          },
+          (err) => {
+            if (!err.message?.includes('Quota exceeded')) {
+              handleFirestoreError(err, OperationType.LIST, 'produtos');
+            }
+          }
+        );
+        unsubscribes.push(unsubAllProducts);
+      }
+
       collections.forEach(col => {
-        const unsub = onSnapshot(collection(db, col.name),
+        const colRef = collection(db, col.name);
+        const q = col.filter ? query(colRef, col.filter) : colRef;
+        
+        const unsub = onSnapshot(q,
           (snap) => {
             const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
             col.setter(data);
           },
-          (err) => handleFirestoreError(err, OperationType.LIST, col.name)
+          (err) => {
+            if (!err.message?.includes('Quota exceeded')) {
+              handleFirestoreError(err, OperationType.LIST, col.name);
+            }
+          }
         );
         unsubscribes.push(unsub);
       });
@@ -5009,7 +5176,8 @@ function AppContent() {
 
   const fetchData = async () => {
     // fetchData is now handled by onSnapshot listeners for real-time updates
-    // Keeping the function signature for compatibility with existing calls
+    // We manually re-fetch the first page of products since we removed its onSnapshot
+    fetchProducts(true);
   };
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -5024,108 +5192,21 @@ function AppContent() {
       
       console.log('Attempting login for:', email);
 
-      const q = query(collection(db, 'usuarios'), where('login', '==', email), where('senha', '==', password));
-      const querySnapshot = await getDocs(q);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
       
-      if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
-        let role: 'admin' | 'seller' = userData.role === 'admin' ? 'admin' : 'seller';
-        
-        // Force admin role for the owner email
-        if (email === 'michellerosario.n@gmail.com') {
-          role = 'admin';
-          // Also update the document if it wasn't admin
-          if (userData.role !== 'admin') {
-            await updateDoc(doc(db, 'usuarios', querySnapshot.docs[0].id), { role: 'admin' });
-          }
-        }
-
-        const loggedUser: User = {
-          id: querySnapshot.docs[0].id,
-          login: userData.login,
-          name: userData.name || userData.login,
-          role: role
-        };
-        setUser(loggedUser);
-        setToken('custom-token');
-        
-        if (rememberMe) {
-          safeStorage.setItem('user', JSON.stringify(loggedUser), true);
-          safeStorage.setItem('token', 'custom-token', true);
-        } else {
-          safeStorage.setItem('user', JSON.stringify(loggedUser), false);
-          safeStorage.setItem('token', 'custom-token', false);
-        }
-        
-        setActiveTab(role === 'admin' ? 'administracao' : 'vendas');
-        showNotification('Login realizado com sucesso!');
-      } else if (email === 'michellerosario.n@gmail.com' && password === '596261') {
-        // Special case for the owner: ensure the account exists and has the correct password
-        const ownerQuery = query(collection(db, 'usuarios'), where('login', '==', email));
-        const ownerSnapshot = await getDocs(ownerQuery);
-        
-        let loggedUser: User;
-        
-        if (ownerSnapshot.empty) {
-          // Create the owner account if it doesn't exist
-          const newUser = {
-            login: email,
-            senha: password,
-            name: 'Michelle Rosario',
-            role: 'admin'
-          };
-          const docRef = await addDoc(collection(db, 'usuarios'), newUser);
-          loggedUser = {
-            id: docRef.id,
-            login: newUser.login,
-            name: newUser.name,
-            role: 'admin'
-          };
-          showNotification('Conta de administrador criada!');
-        } else {
-          // Update the owner password/role if it was different
-          const ownerDoc = ownerSnapshot.docs[0];
-          await updateDoc(doc(db, 'usuarios', ownerDoc.id), { senha: password, role: 'admin' });
-          const userData = ownerDoc.data();
-          loggedUser = {
-            id: ownerDoc.id,
-            login: userData.login,
-            name: userData.name || userData.login,
-            role: 'admin'
-          };
-          showNotification('Acesso de administrador restaurado!');
-        }
-        
-        setUser(loggedUser);
-        setToken('custom-token');
-        
-        if (rememberMe) {
-          safeStorage.setItem('user', JSON.stringify(loggedUser), true);
-          safeStorage.setItem('token', 'custom-token', true);
-        } else {
-          safeStorage.setItem('user', JSON.stringify(loggedUser), false);
-          safeStorage.setItem('token', 'custom-token', false);
-        }
-        
-        setActiveTab('administracao');
-      } else {
-        setAuthError('Usuário ou senha inválidos');
-        showNotification('Usuário ou senha inválidos', 'error');
-      }
+      // The onAuthStateChanged listener will handle the state update
+      showNotification('Login realizado com sucesso!');
     } catch (err: any) {
       console.error('Login error:', err);
-      // Use the helper to log more details if it's a permission error
-      if (err.message && err.message.includes('permission')) {
-        try {
-          handleFirestoreError(err, OperationType.LIST, 'usuarios');
-        } catch (e) {
-          // handleFirestoreError throws, which is fine
-        }
-        setAuthError('Erro de permissão no banco de dados. Contate o administrador.');
-      } else {
-        setAuthError('Erro ao realizar login. Verifique sua conexão.');
+      let message = 'Erro ao realizar login. Verifique seus dados.';
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        message = 'E-mail ou senha inválidos.';
+      } else if (err.code === 'auth/too-many-requests') {
+        message = 'Muitas tentativas falhas. Tente novamente mais tarde.';
       }
-      showNotification('Erro ao realizar login', 'error');
+      setAuthError(message);
+      showNotification(message, 'error');
     } finally {
       setIsLoggingIn(false);
     }
@@ -5133,83 +5214,25 @@ function AppContent() {
 
   const handleSearchUserForReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    const loginToSearch = forgotPasswordLogin.trim().toLowerCase();
-    if (!loginToSearch) {
-      showNotification('Por favor, informe seu usuário ou e-mail.', 'error');
+    const emailToSearch = forgotPasswordLogin.trim().toLowerCase();
+    if (!emailToSearch) {
+      showNotification('Por favor, informe seu e-mail.', 'error');
       return;
     }
     setIsSearchingUser(true);
     try {
-      console.log('Searching for user:', loginToSearch);
-      const q = query(collection(db, 'usuarios'), where('login', '==', loginToSearch));
-      const snap = await getDocs(q);
-      
-      if (!snap.empty) {
-        const userData = snap.docs[0].data();
-        setFoundUserForReset({ id: snap.docs[0].id, ...userData });
-        showNotification(`Usuário ${userData.name || userData.login} encontrado!`);
-      } else {
-        // Tentar buscar pelo nome também, caso o usuário tenha esquecido o login
-        const qName = query(collection(db, 'usuarios'), where('name', '==', forgotPasswordLogin.trim()));
-        const snapName = await getDocs(qName);
-        
-        if (!snapName.empty) {
-          const userData = snapName.docs[0].data();
-          setFoundUserForReset({ id: snapName.docs[0].id, ...userData });
-          showNotification(`Usuário ${userData.name || userData.login} encontrado!`);
-        } else {
-          showNotification('Usuário não encontrado. Verifique o nome digitado.', 'error');
-        }
-      }
+      await sendPasswordResetEmail(auth, emailToSearch);
+      showNotification('E-mail de redefinição enviado! Verifique sua caixa de entrada.');
+      setIsForgotPasswordModalOpen(false);
     } catch (err: any) {
-      console.error('Error searching user:', err);
-      showNotification('Erro ao buscar usuário. Tente novamente.', 'error');
-      try {
-        handleFirestoreError(err, OperationType.GET, 'usuarios');
-      } catch (e) {}
+      console.error('Error sending reset email:', err);
+      let message = 'Erro ao enviar e-mail de redefinição.';
+      if (err.code === 'auth/user-not-found') {
+        message = 'E-mail não encontrado.';
+      }
+      showNotification(message, 'error');
     } finally {
       setIsSearchingUser(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!foundUserForReset) return;
-
-    if (forgotPasswordNewPass !== forgotPasswordConfirmPass) {
-      showNotification('As senhas não coincidem.', 'error');
-      return;
-    }
-    if (forgotPasswordNewPass.length < 4) {
-      showNotification('A senha deve ter pelo menos 4 caracteres.', 'error');
-      return;
-    }
-
-    setIsResettingPassword(true);
-    try {
-      console.log('Resetting password for user ID:', foundUserForReset.id);
-      await updateDoc(doc(db, 'usuarios', foundUserForReset.id), {
-        senha: forgotPasswordNewPass
-      });
-      
-      showNotification('Senha redefinida com sucesso! Agora você pode entrar.');
-      setIsForgotPasswordModalOpen(false);
-      setFoundUserForReset(null);
-      setForgotPasswordLogin('');
-      setForgotPasswordNewPass('');
-      setForgotPasswordConfirmPass('');
-      setShowResetPassword(false);
-      
-      // Limpar campos de login para forçar o usuário a digitar a nova senha
-      setLoginPassword('');
-    } catch (err: any) {
-      console.error('Error resetting password:', err);
-      showNotification('Erro ao redefinir senha. Tente novamente.', 'error');
-      try {
-        handleFirestoreError(err, OperationType.UPDATE, `usuarios/${foundUserForReset.id}`);
-      } catch (e) {}
-    } finally {
-      setIsResettingPassword(false);
     }
   };
 
@@ -5219,89 +5242,77 @@ function AppContent() {
     try {
       const email = loginEmail.trim().toLowerCase();
       const password = loginPassword.trim();
+      const name = loginName.trim() || email;
       
-      // Check if user already exists
-      const q = query(collection(db, 'usuarios'), where('login', '==', email));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        setAuthError('Este usuário já existe');
-        showNotification('Este usuário já existe', 'error');
-        return;
-      }
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
 
-      const newUser = {
+      await updateProfile(firebaseUser, { displayName: name });
+
+      const newUserMetadata = {
         login: email,
-        senha: password,
-        name: loginName.trim() || email,
-        role: loginRole
+        name: name,
+        role: loginRole,
+        createdAt: serverTimestamp()
       };
       
-      const docRef = await addDoc(collection(db, 'usuarios'), newUser);
+      await setDoc(doc(db, 'usuarios', firebaseUser.uid), newUserMetadata);
       
-      if (systemUsers.length === 0) {
-        const loggedUser: User = {
-          id: docRef.id,
-          login: newUser.login,
-          name: newUser.name,
-          role: newUser.role === 'admin' ? 'admin' : 'seller'
-        };
-        
-        setUser(loggedUser);
-        setToken('custom-token');
-        safeStorage.setItem('user', JSON.stringify(loggedUser), true);
-        safeStorage.setItem('token', 'custom-token', true);
-        showNotification('Primeiro administrador criado com sucesso!');
+      showNotification('Usuário cadastrado com sucesso!');
+      if (!user) {
+        // If first user, they are logged in automatically by onAuthStateChanged
       } else {
-        showNotification('Usuário cadastrado com sucesso!');
         setIsModalOpen(false);
         setLoginEmail('');
         setLoginPassword('');
         setLoginName('');
       }
     } catch (err: any) {
-      setAuthError('Erro ao cadastrar usuário');
-      showNotification('Erro ao cadastrar usuário', 'error');
+      console.error('Register error:', err);
+      let message = 'Erro ao cadastrar usuário.';
+      if (err.code === 'auth/email-already-in-use') {
+        message = 'Este e-mail já está em uso.';
+      } else if (err.code === 'auth/weak-password') {
+        message = 'A senha deve ter pelo menos 6 caracteres.';
+      }
+      setAuthError(message);
+      showNotification(message, 'error');
     }
   };
 
   const handleForgotPassword = () => {
-    // Se o usuário já digitou algo no campo de login, usamos isso como sugestão
     const login = loginEmail.trim().toLowerCase();
     setForgotPasswordLogin(login);
-    setForgotPasswordNewPass('');
-    setForgotPasswordConfirmPass('');
-    setFoundUserForReset(null);
-    setShowResetPassword(false);
     setIsForgotPasswordModalOpen(true);
   };
 
-  const handleLogout = () => {
-    safeStorage.removeItem('token');
-    safeStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    setLoginEmail('');
-    setLoginPassword('');
-    setLoginName('');
-    setLoginRole('seller');
-    setIsRegistering(false);
-    setAuthError(null);
-    setRememberMe(true);
-    setIsPublicCatalog(false);
-    setIsForgotPasswordModalOpen(false);
-    setForgotPasswordLogin('');
-    setForgotPasswordNewPass('');
-    setForgotPasswordConfirmPass('');
-    setFoundUserForReset(null);
-    setIsLoggingIn(false);
-    setIsSearchingUser(false);
-    setIsResettingPassword(false);
-    setShowPassword(false);
-    setShowNewPassword(false);
-    setShowResetPassword(false);
-    setActiveTab('administracao');
-    showNotification('Sessão encerrada.');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      safeStorage.removeItem('token');
+      safeStorage.removeItem('user');
+      setToken(null);
+      setUser(null);
+      setLoginEmail('');
+      setLoginPassword('');
+      setLoginName('');
+      setLoginRole('seller');
+      setIsRegistering(false);
+      setAuthError(null);
+      setRememberMe(true);
+      setIsPublicCatalog(false);
+      setIsForgotPasswordModalOpen(false);
+      setForgotPasswordLogin('');
+      setIsLoggingIn(false);
+      setIsSearchingUser(false);
+      setShowPassword(false);
+      setShowNewPassword(false);
+      setActiveTab('administracao');
+      showNotification('Sessão encerrada.');
+    } catch (err) {
+      console.error('Logout error:', err);
+      showNotification('Erro ao encerrar sessão', 'error');
+    }
   };
 
   const generatePDF = (type: string) => {
@@ -5506,6 +5517,8 @@ function AppContent() {
         is_featured: data.is_featured === 'on',
         is_best_seller: data.is_best_seller === 'on',
         is_new: data.is_new === 'on',
+        is_low_stock_manual: data.is_low_stock_manual === 'on',
+        is_promo_manual: data.is_promo_manual === 'on',
         rating: toNum(data.rating),
         short_description: data.short_description || '',
         image_url: productImages[mainImageIndex] || imageBase64 || (editingItem ? editingItem.image_url : ''),
@@ -5518,12 +5531,33 @@ function AppContent() {
       console.log('Payload do produto:', payload);
 
       if (editingItem && editingItem.id) {
+        // Record adjustment if stock changed
+        const oldStock = toNum(editingItem.stock);
+        const newStock = toNum(payload.stock);
+        
+        if (oldStock !== newStock) {
+          await addDoc(collection(db, 'estoque_movimentacoes'), {
+            product_id: editingItem.id,
+            produto: payload.name,
+            marca: payload.brand || '',
+            cor: payload.color || '',
+            tamanho: payload.size || '',
+            quantidade: newStock - oldStock,
+            tipo_movimento: 'ajuste',
+            date: new Date().toISOString(),
+            usuario: user?.name || user?.email || 'Sistema',
+            observations: `Ajuste manual de estoque (de ${oldStock} para ${newStock})`
+          });
+        }
+
         await updateDoc(doc(db, 'produtos', editingItem.id), payload);
         console.log('Produto atualizado com sucesso');
+        setProducts(prev => prev.map(p => p.id === editingItem.id ? { ...payload, id: editingItem.id } : p));
         showNotification('Produto atualizado com sucesso!');
       } else {
         const docRef = await addDoc(collection(db, 'produtos'), payload);
         console.log(`Produto cadastrado com sucesso. ID: ${docRef.id}`);
+        setProducts(prev => [{ ...payload, id: docRef.id }, ...prev]);
         
         if (hasVariations) {
           for (const v of productVariations) {
@@ -5613,6 +5647,8 @@ function AppContent() {
         min_stock: toNum(data.min_stock),
         is_best_seller: data.is_best_seller === 'on',
         is_new: data.is_new === 'on',
+        is_low_stock_manual: data.is_low_stock_manual === 'on',
+        is_promo_manual: data.is_promo_manual === 'on',
         rating: toNum(data.rating),
         short_description: data.short_description || '',
         image_url: imageBase64 || ''
@@ -6275,6 +6311,8 @@ function AppContent() {
       ...data,
       monthly_goal: toNum(data.monthly_goal),
       card_fee: toNum(data.card_fee),
+      low_stock_alert_enabled: formData.get('low_stock_alert_enabled') === 'on',
+      low_stock_threshold: toNum(data.low_stock_threshold),
       logo_url: imageBase64 || storeSettings.logo_url
     };
 
@@ -6360,23 +6398,26 @@ function AppContent() {
       showNotification('As senhas não coincidem', 'error');
       return;
     }
-    if (newPassword.length < 4) {
-      showNotification('A senha deve ter pelo menos 4 caracteres', 'error');
+    if (newPassword.length < 6) {
+      showNotification('A senha deve ter pelo menos 6 caracteres', 'error');
       return;
     }
 
     try {
-      if (user) {
-        await updateDoc(doc(db, 'usuarios', user.id), {
-          senha: newPassword
-        });
+      if (auth.currentUser) {
+        await updatePassword(auth.currentUser, newPassword);
         showNotification('Senha alterada com sucesso!');
         setIsChangePasswordModalOpen(false);
         setNewPassword('');
         setConfirmNewPassword('');
       }
-    } catch (err) {
-      showNotification('Erro ao alterar senha', 'error');
+    } catch (err: any) {
+      console.error('Error updating password:', err);
+      let message = 'Erro ao alterar senha';
+      if (err.code === 'auth/requires-recent-login') {
+        message = 'Para sua segurança, você precisa fazer login novamente antes de alterar a senha.';
+      }
+      showNotification(message, 'error');
     }
   };
 
@@ -6388,14 +6429,12 @@ function AppContent() {
     }
     const formData = new FormData(e.target as HTMLFormElement);
     const login = (formData.get('login') as string).trim().toLowerCase();
-    const senha = (formData.get('senha') as string).trim();
     const name = (formData.get('name') as string).trim() || login;
     const role = formData.get('role') as 'admin' | 'seller';
 
     const userData = {
       name,
       login,
-      senha,
       role
     };
 
@@ -6440,7 +6479,7 @@ function AppContent() {
         try {
           await deleteDoc(doc(db, 'produtos', id));
           console.log('Produto excluído com sucesso');
-          fetchData();
+          setProducts(prev => prev.filter(p => p.id !== id));
           showNotification('Produto excluído com sucesso!');
         } catch (error: any) {
           console.error('Erro ao excluir produto:', error);
@@ -6891,15 +6930,15 @@ function AppContent() {
             )}
 
             <div className="space-y-1">
-              <label className="text-[11px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] ml-2">Usuário</label>
+              <label className="text-[11px] md:text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] ml-2">E-mail</label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-champagne transition-colors" />
                 <input 
-                  type="text" 
+                  type="email" 
                   value={loginEmail || ''}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 md:py-2.5 rounded-lg border border-gray-100 focus:border-champagne focus:ring-2 focus:ring-champagne/10 outline-none transition-all bg-gray-50/50 focus:bg-white text-base md:text-xs font-medium"
-                  placeholder="Seu login"
+                  placeholder="seu@email.com"
                   required
                 />
               </div>
@@ -7083,7 +7122,16 @@ function AppContent() {
   }
 
   if (isPublicCatalog) {
-    return <CatalogPage user={user} />;
+    return (
+      <CatalogPage 
+        user={user} 
+        products={products} 
+        storeSettings={storeSettings} 
+        hasMoreProducts={hasMoreProducts}
+        isLoadingMore={isLoadingMore}
+        onLoadMore={() => fetchProducts(false)}
+      />
+    );
   }
 
   if (!token) {
@@ -7467,6 +7515,7 @@ function AppContent() {
           {activeTab === 'administracao' && (
             <DashboardContent 
               dashboard={dashboard} 
+              products={products}
               storeSettings={storeSettings} 
               generatePDF={generatePDF} 
               showNotification={showNotification} 
@@ -7478,8 +7527,8 @@ function AppContent() {
                     await updateDoc(doc(db, 'produtos', pId), {
                       is_featured: !p.is_featured
                     });
+                    setProducts(prev => prev.map(prod => prod.id === pId ? { ...prod, is_featured: !prod.is_featured } : prod));
                     showNotification(`Produto ${!p.is_featured ? 'promovido' : 'removido dos destaques'} com sucesso!`);
-                    fetchData();
                   } catch (err) {
                     showNotification('Erro ao atualizar status do produto', 'error');
                   }
@@ -7494,8 +7543,8 @@ function AppContent() {
                     await updateDoc(doc(db, 'produtos', pId), {
                       stock: toNum(p.stock) + qty
                     });
+                    setProducts(prev => prev.map(prod => prod.id === pId ? { ...prod, stock: toNum(prod.stock) + qty } : prod));
                     showNotification(`Estoque de ${p.name} atualizado (+${qty})`);
-                    fetchData();
                   } catch (err) {
                     showNotification('Erro ao atualizar estoque', 'error');
                   }
@@ -7631,6 +7680,7 @@ function AppContent() {
               expenses={expenses}
               ads={ads}
               sellers={sellers}
+              storeSettings={storeSettings}
               calculateDashboardData={calculateDashboardData}
               showNotification={showNotification} 
               showConfirm={showConfirm} 
@@ -7678,14 +7728,18 @@ function AppContent() {
                      await updateDoc(doc(db, 'produtos', pId), {
                        is_featured: !p.is_featured
                      });
+                     setProducts(prev => prev.map(prod => prod.id === pId ? { ...prod, is_featured: !prod.is_featured } : prod));
                      showNotification(`Produto ${!p.is_featured ? 'promovido' : 'removido dos destaques'} com sucesso!`);
-                     fetchData();
                    } catch (err) {
                      showNotification('Erro ao atualizar status do produto', 'error');
                    }
                  }
                }}
                getCssColor={getCssColor}
+               storeSettings={storeSettings}
+               hasMoreProducts={hasMoreProducts}
+               isLoadingMore={isLoadingMore}
+               onLoadMore={() => fetchProducts(false)}
              />
            )}
 
@@ -8010,6 +8064,44 @@ function AppContent() {
               </div>
             </div>
 
+            <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Alerta de Estoque Baixo</h4>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Controle de reposição</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    name="low_stock_alert_enabled"
+                    defaultChecked={storeSettings.low_stock_alert_enabled}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-champagne/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-midnight"></div>
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Quantidade Mínima Global</label>
+                <div className="relative">
+                  <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input 
+                    name="low_stock_threshold"
+                    type="number"
+                    defaultValue={storeSettings.low_stock_threshold}
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none transition-all text-sm"
+                    placeholder="Ex: 3"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400">Define o limite para considerar um produto com estoque baixo quando não houver um mínimo específico definido no produto.</p>
+              </div>
+            </div>
+
                   <div className="pt-4">
                     <button 
                       type="submit"
@@ -8170,29 +8262,16 @@ function AppContent() {
               <input name="name" defaultValue={editingItem?.name} placeholder="Ex: Michele Rosario" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
             </div>
             <div className="space-y-1">
-              <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Login</label>
-              <input name="login" defaultValue={editingItem?.login} placeholder="Ex: michelerosario" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
+              <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Login (E-mail)</label>
+              <input name="login" type="email" defaultValue={editingItem?.login} placeholder="Ex: michelerosario@email.com" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
             </div>
-            <div className="space-y-1">
-              <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Senha</label>
-              <div className="relative">
-                <input 
-                  name="senha" 
-                  type={showPassword ? "text" : "password"}
-                  defaultValue={editingItem?.senha} 
-                  placeholder="••••••••" 
-                  className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" 
-                  required 
-                />
-                <button 
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-midnight transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            {!editingItem && (
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-xs text-blue-600">
+                  <strong>Nota:</strong> O usuário deve se cadastrar na tela inicial com este e-mail para ter acesso ao sistema.
+                </p>
               </div>
-            </div>
+            )}
             <div className="space-y-1">
               <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Função</label>
               <select name="role" defaultValue={editingItem?.role || 'seller'} className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required>
@@ -8303,7 +8382,7 @@ function AppContent() {
 
                 <div className="space-y-1">
                   <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Estoque Mínimo (Alerta)</label>
-                  <input name="min_stock" type="number" defaultValue={5} className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
+                  <input name="min_stock" type="number" defaultValue={storeSettings.low_stock_threshold || 3} className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
                 </div>
 
                 <div className="space-y-4">
@@ -8328,6 +8407,31 @@ function AppContent() {
                       />
                       <label htmlFor="batch_is_new" className="text-sm font-bold text-gray-700 cursor-pointer">
                         Novidade (Selo)
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <input 
+                        type="checkbox" 
+                        name="is_low_stock_manual" 
+                        id="batch_is_low_stock_manual"
+                        className="w-5 h-5 rounded border-gray-300 text-midnight focus:ring-midnight"
+                      />
+                      <label htmlFor="batch_is_low_stock_manual" className="text-sm font-bold text-gray-700 cursor-pointer">
+                        Últimas Unidades (Selo)
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <input 
+                        type="checkbox" 
+                        name="is_promo_manual" 
+                        id="batch_is_promo_manual"
+                        className="w-5 h-5 rounded border-gray-300 text-midnight focus:ring-midnight"
+                      />
+                      <label htmlFor="batch_is_promo_manual" className="text-sm font-bold text-gray-700 cursor-pointer">
+                        Promoção (Selo)
                       </label>
                     </div>
                   </div>
@@ -8569,7 +8673,7 @@ function AppContent() {
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1">
                 <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Estoque Mínimo para Alerta</label>
-                <input name="min_stock" type="number" defaultValue={editingItem?.min_stock || 5} placeholder="Ex: 5" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
+                <input name="min_stock" type="number" defaultValue={editingItem?.min_stock || storeSettings.low_stock_threshold || 3} placeholder="Ex: 5" className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none text-base md:text-sm" required />
               </div>
             </div>
             <div className="space-y-4">
@@ -8596,6 +8700,33 @@ function AppContent() {
                   />
                   <label htmlFor="is_new" className="text-sm font-bold text-gray-700 cursor-pointer">
                     Novidade (Selo no Catálogo)
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <input 
+                    type="checkbox" 
+                    name="is_low_stock_manual" 
+                    id="is_low_stock_manual"
+                    defaultChecked={editingItem?.is_low_stock_manual}
+                    className="w-5 h-5 rounded border-gray-300 text-midnight focus:ring-midnight"
+                  />
+                  <label htmlFor="is_low_stock_manual" className="text-sm font-bold text-gray-700 cursor-pointer">
+                    Últimas Unidades (Selo)
+                  </label>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <input 
+                    type="checkbox" 
+                    name="is_promo_manual" 
+                    id="is_promo_manual"
+                    defaultChecked={editingItem?.is_promo_manual}
+                    className="w-5 h-5 rounded border-gray-300 text-midnight focus:ring-midnight"
+                  />
+                  <label htmlFor="is_promo_manual" className="text-sm font-bold text-gray-700 cursor-pointer">
+                    Promoção (Selo)
                   </label>
                 </div>
               </div>
@@ -9509,7 +9640,7 @@ function AppContent() {
                 value={newPassword || ''}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full px-4 py-4 md:py-3 rounded-xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none transition-all bg-gray-50/50 focus:bg-white text-base md:text-sm"
-                placeholder="Mínimo 4 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 required
               />
               <button 
@@ -9562,7 +9693,6 @@ function AppContent() {
                 <button 
                   onClick={() => {
                     setIsForgotPasswordModalOpen(false);
-                    setFoundUserForReset(null);
                     setForgotPasswordLogin('');
                   }}
                   className="p-2 hover:bg-white rounded-xl transition-colors text-gray-400 hover:text-gray-600"
@@ -9572,102 +9702,36 @@ function AppContent() {
               </div>
 
               <div className="p-6 space-y-6">
-                {!foundUserForReset ? (
-                  <form onSubmit={handleSearchUserForReset} className="space-y-4">
-                    <p className="text-sm text-gray-500 font-medium">
-                      Informe seu nome de usuário ou e-mail para buscar sua conta.
-                    </p>
-                    <div className="space-y-1">
-                      <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Usuário ou E-mail</label>
-                      <div className="relative">
-                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input 
-                          type="text" 
-                          value={forgotPasswordLogin || ''}
-                          onChange={(e) => setForgotPasswordLogin(e.target.value)}
-                          className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none transition-all bg-gray-50/50 focus:bg-white text-base md:text-sm"
-                          placeholder="Ex: michellerosario.n@gmail.com"
-                          required
-                        />
-                      </div>
+                <form onSubmit={handleSearchUserForReset} className="space-y-4">
+                  <p className="text-sm text-gray-500 font-medium">
+                    Informe seu e-mail para receber um link de redefinição de senha.
+                  </p>
+                  <div className="space-y-1">
+                    <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">E-mail</label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-midnight transition-colors" />
+                      <input 
+                        type="email" 
+                        value={forgotPasswordLogin || ''}
+                        onChange={(e) => setForgotPasswordLogin(e.target.value)}
+                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:border-midnight focus:ring-4 focus:ring-midnight/10 outline-none transition-all bg-gray-50/50 focus:bg-white text-base md:text-sm"
+                        placeholder="seu@email.com"
+                        required
+                      />
                     </div>
-                    <button 
-                      type="submit"
-                      disabled={isSearchingUser}
-                      className="w-full bg-midnight text-champagne py-4 rounded-2xl font-bold shadow-lg shadow-midnight/10 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                      {isSearchingUser ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>Continuar <ArrowRight className="w-5 h-5" /></>
-                      )}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleResetPassword} className="space-y-4">
-                    <div className="p-4 bg-champagne/10 rounded-2xl border border-champagne/20 mb-4">
-                      <p className="text-sm text-midnight font-bold">Usuário encontrado: {foundUserForReset.name || foundUserForReset.login}</p>
-                      <p className="text-xs text-midnight/70 mt-1">Defina sua nova senha abaixo.</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Nova Senha</label>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input 
-                          type={showResetPassword ? "text" : "password"} 
-                          value={forgotPasswordNewPass || ''}
-                          onChange={(e) => setForgotPasswordNewPass(e.target.value)}
-                          className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none transition-all bg-gray-50/50 focus:bg-white text-base md:text-sm"
-                          placeholder="Mínimo 4 caracteres"
-                          required
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => setShowResetPassword(!showResetPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-champagne transition-colors"
-                        >
-                          {showResetPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-sm md:text-xs font-bold text-gray-400 uppercase ml-1">Confirmar Nova Senha</label>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input 
-                          type={showResetPassword ? "text" : "password"} 
-                          value={forgotPasswordConfirmPass || ''}
-                          onChange={(e) => setForgotPasswordConfirmPass(e.target.value)}
-                          className="w-full pl-12 pr-12 py-4 rounded-2xl border border-gray-200 focus:border-champagne focus:ring-4 focus:ring-champagne/10 outline-none transition-all bg-gray-50/50 focus:bg-white text-base md:text-sm"
-                          placeholder="Repita a nova senha"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <button 
-                      type="submit"
-                      disabled={isResettingPassword}
-                      className="w-full bg-midnight text-champagne py-4 rounded-2xl font-bold shadow-lg shadow-midnight/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                      {isResettingPassword ? (
-                        <div className="w-5 h-5 border-2 border-champagne border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>Redefinir Senha <Check className="w-5 h-5" /></>
-                      )}
-                    </button>
-                    
-                    <button 
-                      type="button"
-                      onClick={() => setFoundUserForReset(null)}
-                      className="w-full text-sm text-gray-500 font-bold hover:underline"
-                    >
-                      Voltar para busca
-                    </button>
-                  </form>
-                )}
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={isSearchingUser}
+                    className="w-full bg-midnight text-champagne py-4 rounded-2xl font-bold shadow-lg shadow-midnight/10 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {isSearchingUser ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>Enviar E-mail <ArrowRight className="w-5 h-5" /></>
+                    )}
+                  </button>
+                </form>
               </div>
             </motion.div>
           </div>

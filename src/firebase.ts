@@ -1,6 +1,32 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, increment, runTransaction, getDocFromServer } from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  onAuthStateChanged, 
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+  updatePassword,
+  User 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  query, 
+  where, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  increment, 
+  runTransaction, 
+  getDocFromServer 
+} from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase
@@ -19,7 +45,16 @@ export const estoqueMovimentacoesRef = collection(db, 'estoque_movimentacoes');
 export const configuracoesRef = collection(db, 'configuracoes');
 
 // Auth helpers
-export { signInWithEmailAndPassword, createUserWithEmailAndPassword };
+export { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  onAuthStateChanged,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+  updatePassword
+};
+export type { User };
 
 // Connection test
 async function testConnection() {

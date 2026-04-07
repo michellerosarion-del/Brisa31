@@ -108,6 +108,10 @@
         "telefone_whatsapp": { "type": "string" },
         "mensagem_padrao_whatsapp": { "type": "string" },
         "monthly_goal": { "type": "number" },
+        "card_fee": { "type": "number" },
+        "logo_url": { "type": "string" },
+        "low_stock_alert_enabled": { "type": "boolean" },
+        "low_stock_threshold": { "type": "number" },
         "data_atualizacao": { "type": "string", "format": "date-time" }
       }
     },
@@ -149,11 +153,11 @@
       "type": "object",
       "properties": {
         "login": { "type": "string" },
-        "senha": { "type": "string" },
         "name": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "seller"] }
+        "role": { "type": "string", "enum": ["admin", "seller"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["login", "senha", "name", "role"]
+      "required": ["login", "name", "role"]
     },
     "Ad": {
       "title": "Ad",
