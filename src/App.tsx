@@ -1191,7 +1191,7 @@ const App = () => {
             handleLogout={handleLogout}
           />
 
-          <div className="flex-1 p-3 md:p-6 max-w-7xl mx-auto w-full">
+          <div className="flex-1 pt-7 px-3 pb-3 md:p-6 max-w-7xl mx-auto w-full">
             <AnimatePresence mode="wait">
               <div key={activeTab}>
                 {activeTab === 'dashboard' && (
