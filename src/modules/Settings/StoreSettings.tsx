@@ -47,13 +47,15 @@ export const StoreSettings = ({ storeSettings, showNotification, toNum, onRefres
     const debitFee = toNum(data.debit_fee);
     const processedDebitFee = debitFee > 100 ? 100 : debitFee;
 
+    const monthlyGoal = toNum(data.monthly_goal);
+
     try {
       const settingsData = {
         nome_loja: data.nome_loja,
         logo_url: data.logo_url,
         telefone_whatsapp: data.telefone_whatsapp,
         mensagem_padrao_whatsapp: data.mensagem_padrao_whatsapp,
-        monthly_goal: toNum(data.monthly_goal),
+        monthly_goal: monthlyGoal,
         card_fee: processedCardFee,
         debit_fee: processedDebitFee,
         low_stock_threshold: toNum(data.low_stock_threshold),
@@ -106,7 +108,12 @@ export const StoreSettings = ({ storeSettings, showNotification, toNum, onRefres
                 type="text" 
                 inputMode="decimal" 
                 defaultValue={String(storeSettings?.monthly_goal || 0).replace('.', ',')} 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-midnight outline-none" 
+                onBlur={(e) => {
+                  const val = e.target.value.replace('.', ',');
+                  e.target.value = val;
+                }}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-midnight outline-none font-medium" 
+                placeholder="Ex: 5000,00"
                 required 
               />
             </div>
