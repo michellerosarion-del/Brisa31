@@ -880,8 +880,8 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
         totalStock: totalStock
       };
     } else {
-      // Group by Name and Brand for non-variation products
-      const key = `${p.name || 'Sem nome'}|${p.brand || 'Brisa 31 | Moda Masculina'}`;
+      // Group by Name, Brand and Category for non-variation products
+      const key = `${p.name || 'Sem nome'}|${p.brand || 'Brisa 31 | Moda Masculina'}|${p.category || 'Geral'}`;
       const pImages = p.images && Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []);
       
       if (!acc[key]) {
@@ -938,28 +938,15 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
     return matchesSearch && matchesCategory && matchesSize && matchesColor && matchesPrice;
   });
 
-  const [visibleCount, setVisibleCount] = useState(12);
+  const [visibleCount, setVisibleCount] = useState(24);
 
   const displayedCatalog = useMemo(() => {
     return filteredCatalog.slice(0, visibleCount);
   }, [filteredCatalog, visibleCount]);
 
   useEffect(() => {
-    setVisibleCount(12);
+    setVisibleCount(24);
   }, [catalogSearch, catalogCategoryFilter, catalogSizeFilter, catalogColorFilter, catalogPriceFilter]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 800) {
-        if (visibleCount < filteredCatalog.length) {
-          setVisibleCount(prev => prev + 12);
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [visibleCount, filteredCatalog.length]);
 
   return (
     <div className="space-y-6">
@@ -1041,6 +1028,20 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
           />
         ))}
       </div>
+
+      {visibleCount < filteredCatalog.length && (
+        <div className="flex flex-col items-center justify-center pt-8 pb-12 gap-4">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+            Mostrando {displayedCatalog.length} de {filteredCatalog.length} modelos
+          </p>
+          <button 
+            onClick={() => setVisibleCount(prev => prev + 24)}
+            className="px-8 py-4 bg-white border-2 border-midnight text-midnight rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-midnight hover:text-white transition-all active:scale-95 shadow-lg shadow-midnight/5"
+          >
+            Carregar mais produtos
+          </button>
+        </div>
+      )}
 
       {/* Product Details Modal */}
       {selectedProduct && (
@@ -1211,15 +1212,16 @@ export const CatalogPage = ({
         if (initialProducts && initialProducts.length > 0) {
           setProducts(initialProducts.filter(p => p.status === 'ativo' || !p.status));
         } else {
-          // Optimized fetch for catalog - only active products
+          // Optimized fetch for catalog - fetch all and filter in JS for safety
           const q = query(
             collection(db, 'produtos'), 
-            where('status', '==', 'ativo'),
             orderBy('name', 'asc')
           );
           const snap = await getDocs(q);
           const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
-          setProducts(list || []);
+          // Filter only active or undefined status products
+          const activeList = list.filter(p => p.status === 'ativo' || !p.status);
+          setProducts(activeList || []);
         }
 
         if (initialSettings && initialSettings.id) {

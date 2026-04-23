@@ -210,7 +210,7 @@ const App = () => {
   const [quickSaleTab, setQuickSaleTab] = useState<'products' | 'cart'>('products');
   
   // Pagination State
-  const [productsLimit, setProductsLimit] = useState(200);
+  const [productsLimit, setProductsLimit] = useState(500);
   const [salesLimit, setSalesLimit] = useState(100);
   const [customersLimit, setCustomersLimit] = useState(100);
   const [expensesLimit, setExpensesLimit] = useState(100);
