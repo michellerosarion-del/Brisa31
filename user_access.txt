@@ -1,0 +1,6 @@
+4115:        await updateDoc(doc(db, 'usuarios', user.id), {
+4361:    if (user && user.login === 'michellerosario.n@gmail.com' && user.role !== 'admin') {
+4366:      // updateDoc(doc(db, 'usuarios', user.id), { role: 'admin' }).catch(console.error);
+7435:                {user.name?.charAt(0) || '?'}
+7438:                <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+7439:                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{user.role === 'admin' ? 'Administrador' : 'Vendedor'}</p>

@@ -7,20 +7,36 @@
       "properties": {
         "name": { "type": "string" },
         "category": { "type": "string" },
-        "color": { "type": "string" },
-        "size": { "type": "string" },
+        "cor": { "type": "string" },
+        "tamanho": { "type": "string" },
         "cost": { "type": "number" },
         "price": { "type": "number" },
         "stock": { "type": "integer" },
         "min_stock": { "type": "integer" },
         "brand": { "type": "string" },
         "code": { "type": "string" },
-        "image_url": { "type": "string" },
         "label": { "type": "string" },
         "supplier_id": { "type": "string" },
+        "images": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "cash_price": { "type": "number" },
         "card_price": { "type": "number" },
         "promo_price": { "type": "number" },
+        "variations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "cor": { "type": "string" },
+              "tamanho": { "type": "string" },
+              "estoque": { "type": "integer" }
+            }
+          }
+        },
+        "has_variations": { "type": "boolean" },
         "date_added": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "price", "stock"]
@@ -55,8 +71,8 @@
               "unit_price": { "type": "number" },
               "total_price": { "type": "number" },
               "cost": { "type": "number" },
-              "size": { "type": "string" },
-              "color": { "type": "string" }
+              "tamanho": { "type": "string" },
+              "cor": { "type": "string" }
             }
           }
         },
@@ -68,7 +84,12 @@
         "final_price": { "type": "number", "description": "Actual amount paid by customer" },
         "total_cost": { "type": "number", "description": "Sum of costs of all items" },
         "profit": { "type": "number", "description": "final_price - total_cost" },
-        "sale_group_id": { "type": "string" }
+        "sale_group_id": { "type": "string" },
+        "installments": { "type": "integer" },
+        "gross_value": { "type": "number" },
+        "net_value": { "type": "number" },
+        "installment_fee_value": { "type": "number" },
+        "installment_fee_percentage": { "type": "number" }
       },
       "required": ["items", "final_price", "date"]
     },
@@ -112,7 +133,17 @@
         "logo_url": { "type": "string" },
         "low_stock_alert_enabled": { "type": "boolean" },
         "low_stock_threshold": { "type": "number" },
-        "data_atualizacao": { "type": "string", "format": "date-time" }
+        "data_atualizacao": { "type": "string", "format": "date-time" },
+        "taxasParcelamento": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "installments": { "type": "integer" },
+              "fee": { "type": "number" }
+            }
+          }
+        }
       }
     },
     "StockMovement": {
@@ -143,7 +174,8 @@
         "quantity": { "type": "integer" },
         "unit_price": { "type": "number" },
         "total_price": { "type": "number" },
-        "size": { "type": "string" }
+        "tamanho": { "type": "string" },
+        "cor": { "type": "string" }
       },
       "required": ["sale_id", "product_id", "quantity"]
     },

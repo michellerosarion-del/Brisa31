@@ -5,25 +5,22 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  collection, 
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../firebase';
-import { 
   CatalogContent, 
   Product, 
   StoreSettings 
 } from '../components/Catalog';
+import { db } from '../firebase';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 
 export const CatalogPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({ 
     id: 'default', 
-    nome_loja: 'Brisa 31', 
+    nome_loja: 'Brisa 31 | Moda Masculina', 
     telefone_whatsapp: '',
     mensagem_padrao_whatsapp: 'Olá! Tenho interesse neste produto: {nome_produto} - R$ {preco_produto}',
     monthly_goal: 10000,
-    logo_url: '',
+    logo_url: '/logo.png',
     card_fee: 3.5
   });
   const [catalogSearch, setCatalogSearch] = useState('');
@@ -42,21 +39,26 @@ export const CatalogPage = () => {
   };
 
   useEffect(() => {
-    const unsubProducts = onSnapshot(collection(db, 'produtos'), (snap) => {
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      setProducts(data);
-    });
+    const fetchCatalogData = async () => {
+      try {
+        // Fetch Products - Optimized for Catalog
+        const q = query(collection(db, 'produtos'), orderBy('name', 'asc'));
+        const snap = await getDocs(q);
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
+        setProducts(list || []);
 
-    const unsubConfig = onSnapshot(collection(db, 'configuracoes'), (snap) => {
-      if (!snap.empty) {
-        setStoreSettings({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
+        // Fetch Config
+        const settingsSnap = await getDocs(collection(db, 'configuracoes'));
+        if (!settingsSnap.empty) {
+          setStoreSettings({ id: settingsSnap.docs[0].id, ...settingsSnap.docs[0].data() } as any);
+        }
+      } catch (error) {
+        console.error("Error fetching catalog data:", error);
+        showNotification("Erro ao carregar o catálogo. Tente novamente mais tarde.", "error");
       }
-    });
-
-    return () => {
-      unsubProducts();
-      unsubConfig();
     };
+
+    fetchCatalogData();
   }, []);
 
   return (

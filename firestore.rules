@@ -76,7 +76,7 @@ service cloud.firestore {
     }
 
     match /produtos/{productId} {
-      allow read: if true;
+      allow read: if isAuthenticated() || (resource.data.get('status', 'ativo') == 'ativo');
       allow write: if isAdmin();
     }
 

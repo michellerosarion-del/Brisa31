@@ -1,0 +1,283 @@
+import React, { useState, useMemo } from 'react';
+import { Search, Calendar, X, Info, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { db, handleFirestoreError, OperationType } from '../../firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { Card } from '../../components/ui/Card';
+import { Modal } from '../../components/ui/Modal';
+import { StockMovement } from '../../types';
+
+interface StockHistoryProps {
+  stockMovements: StockMovement[];
+  showNotification: (msg: string, type?: 'success' | 'error') => void;
+  showConfirm: (title: string, message: string, onConfirm: () => void, type?: 'danger' | 'warning') => void;
+  formatCurrency: (val: number) => string;
+  toNum: (val: any) => number;
+  loadMore?: () => void;
+  onRefresh?: () => void;
+}
+
+export const StockHistoryContent = ({ stockMovements, showNotification, showConfirm, formatCurrency, toNum, loadMore, onRefresh }: StockHistoryProps) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [selectedMovement, setSelectedMovement] = useState<StockMovement | null>(null);
+  
+  const handleDeleteMovement = async (id: string) => {
+    showConfirm(
+      'Excluir Registro',
+      'Tem certeza que deseja excluir este registro do histórico? Esta ação não pode ser desfeita e não afetará o estoque atual.',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'estoque_movimentacoes', id));
+          showNotification('Registro excluído com sucesso!');
+          if (onRefresh) onRefresh();
+        } catch (error: any) {
+          handleFirestoreError(error, OperationType.DELETE, `estoque_movimentacoes/${id}`);
+        }
+      },
+      'danger'
+    );
+  };
+
+  const filteredMovements = useMemo(() => {
+    return stockMovements.filter(m => {
+      const matchesSearch = (m.produto || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.tipo_movimento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.marca || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.usuario || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const movementDate = new Date(m.date);
+      const matchesDate = !dateFilter || movementDate.toISOString().split('T')[0] === dateFilter;
+      const matchesMonth = !monthFilter || (movementDate.getMonth() + 1).toString().padStart(2, '0') === monthFilter.split('-')[1] && movementDate.getFullYear().toString() === monthFilter.split('-')[0];
+      const matchesType = !typeFilter || m.tipo_movimento === typeFilter;
+
+      return matchesSearch && matchesDate && matchesMonth && matchesType;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [stockMovements, searchTerm, dateFilter, monthFilter, typeFilter]);
+
+  const totalPages = Math.ceil(filteredMovements.length / itemsPerPage);
+  const paginatedMovements = filteredMovements.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'entrada': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'venda': return 'bg-rose-50 text-rose-700 border-rose-100';
+      case 'ajuste': return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'reposicao': return 'bg-blue-50 text-blue-700 border-blue-100';
+      default: return 'bg-gray-50 text-gray-700 border-gray-100';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-4 bg-white shadow-sm border border-slate-100 rounded-xl">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Buscar por produto, marca, usuário..." 
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="relative group">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input 
+                type="date" 
+                className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all uppercase tracking-wider"
+                value={dateFilter}
+                onChange={(e) => { setDateFilter(e.target.value); if(e.target.value) setMonthFilter(''); setCurrentPage(1); }}
+              />
+            </div>
+            <select 
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[140px]"
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">Todos Tipos</option>
+              <option value="entrada">Entrada</option>
+              <option value="venda">Venda</option>
+              <option value="reposicao">Reposição</option>
+              <option value="ajuste">Ajuste</option>
+            </select>
+            {(searchTerm || dateFilter || monthFilter || typeFilter) && (
+              <button 
+                onClick={() => {
+                  setSearchTerm('');
+                  setDateFilter('');
+                  setMonthFilter('');
+                  setTypeFilter('');
+                  setCurrentPage(1);
+                }}
+                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-600 transition-colors px-2"
+              >
+                <X className="w-4 h-4" /> Limpar
+              </button>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <Card className="overflow-hidden border border-slate-100 rounded-xl bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Data</th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Produto</th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Tipo</th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Qtd</th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {paginatedMovements.map(m => (
+                <tr key={m.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-slate-900 leading-none mb-1">
+                        {new Date(m.date).toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {new Date(m.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-slate-900 leading-tight">{m.produto}</span>
+                      <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{m.marca} • {m.cor}/{m.tamanho}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-widest ${
+                      m.tipo_movimento === 'entrada' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                      m.tipo_movimento === 'venda' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                      m.tipo_movimento === 'reposicao' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                      'bg-slate-100 text-slate-700 border-slate-200'
+                    }`}>
+                      {m.tipo_movimento}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`text-sm font-bold ${m.quantidade > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {m.quantidade > 0 ? `+${m.quantidade}` : m.quantidade}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button 
+                        onClick={() => setSelectedMovement(m)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteMovement(m.id)} 
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex justify-between items-center gap-4 px-4 py-3 border-t border-slate-100 bg-slate-50/50">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Página {currentPage} de {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button 
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                className="p-1.5 bg-white border border-slate-200 rounded text-slate-400 hover:text-blue-600 disabled:opacity-50 transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                className="p-1.5 bg-white border border-slate-200 rounded text-slate-400 hover:text-blue-600 disabled:opacity-50 transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {loadMore && (
+        <div className="flex justify-center pt-8">
+          <button 
+            onClick={loadMore}
+            className="px-8 py-3 bg-white border border-slate-200 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 hover:text-midnight transition-all shadow-sm active:scale-95"
+          >
+            Carregar mais histórico
+          </button>
+        </div>
+      )}
+
+      <Modal
+        isOpen={!!selectedMovement}
+        onClose={() => setSelectedMovement(null)}
+        title="Detalhes da Movimentação"
+        maxWidth="max-w-sm"
+      >
+        {selectedMovement && (
+          <div className="space-y-6">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Produto</p>
+              <p className="text-sm font-bold text-slate-900">{selectedMovement.produto}</p>
+              <p className="text-xs text-slate-500 mt-1">{selectedMovement.marca} • {selectedMovement.cor}/{selectedMovement.tamanho}</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipo</p>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getTypeColor(selectedMovement.tipo_movimento)}`}>
+                  {selectedMovement.tipo_movimento}
+                </span>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantidade</p>
+                <p className={`text-lg font-black ${selectedMovement.quantidade > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {selectedMovement.quantidade > 0 ? '+' : ''}{selectedMovement.quantidade}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Usuário</span>
+                <span className="text-xs font-bold text-slate-700">{selectedMovement.usuario || 'Sistema'}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</span>
+                <span className="text-xs font-bold text-slate-700">{new Date(selectedMovement.date).toLocaleString('pt-BR')}</span>
+              </div>
+              {selectedMovement.observacao && (
+                <div className="py-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observação</span>
+                  <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
+                    "{selectedMovement.observacao}"
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+};
