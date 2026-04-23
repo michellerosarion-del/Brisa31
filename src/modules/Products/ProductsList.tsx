@@ -73,14 +73,14 @@ export const ProductsList = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center bg-slate-900 p-4 rounded-xl shadow-lg border border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center shadow-inner">
-            <Package className="w-5 h-5 text-white" />
+      <div className="flex justify-between items-center bg-slate-900 p-3 sm:p-4 rounded-xl shadow-lg border border-slate-800">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/10 rounded-lg flex items-center justify-center shadow-inner">
+            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white uppercase tracking-widest leading-none">Gestão de Peças</h2>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">Controle de Inventário</p>
+            <h2 className="text-[11px] sm:text-sm font-bold text-white uppercase tracking-widest leading-none">Peças</h2>
+            <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5 sm:mt-1">Estoque</p>
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export const ProductsList = ({
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 products-list">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 products-list">
         {displayedProducts.map((p: any) => (
           <motion.div 
             key={p.id}
@@ -145,9 +145,9 @@ export const ProductsList = ({
             animate={{ opacity: 1, scale: 1 }}
             className="group product-card"
           >
-            <Card className="p-4 h-full flex flex-col gap-3 hover:border-slate-300 transition-all duration-300 bg-white border-slate-100 rounded-xl">
-              <div className="flex gap-4">
-                <div className="w-16 h-16 shrink-0 bg-slate-50 rounded-xl overflow-hidden border border-slate-100 group-hover:scale-105 transition-transform">
+            <Card className="p-3 sm:p-4 h-full flex flex-col gap-2 sm:gap-3 hover:border-slate-300 transition-all duration-300 bg-white border-slate-100 rounded-xl">
+              <div className="flex gap-3 sm:gap-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 bg-slate-50 rounded-xl overflow-hidden border border-slate-100 group-hover:scale-105 transition-transform">
                   <img 
                     src={(p.images && p.images.length > 0) ? p.images[0] : `https://picsum.photos/seed/${p.id}/100/100`} 
                     alt={p.name} 
@@ -158,13 +158,13 @@ export const ProductsList = ({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest truncate mb-1">{p.brand}</p>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${p.status === 'inativo' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <p className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-widest truncate mb-0.5 sm:mb-1">{p.brand}</p>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className={`text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider ${p.status === 'inativo' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'}`}>
                           {p.status || 'ativo'}
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{p.code}</span>
+                        <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{p.code}</span>
                       </div>
                       {(() => {
                         const totalStock = p.has_variations && p.variations 
@@ -174,8 +174,8 @@ export const ProductsList = ({
                         
                         if (storeSettings.low_stock_alert_enabled && totalStock > 0 && totalStock <= threshold) {
                           return (
-                            <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-wider">
-                                Estoque baixo
+                            <span className="text-[8px] sm:text-[10px] font-bold bg-rose-50 text-rose-600 px-1.5 sm:px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-wider">
+                                Baixo
                             </span>
                           );
                         }
@@ -183,10 +183,10 @@ export const ProductsList = ({
                       })()}
                     </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-slate-900 leading-tight mt-1 line-clamp-1" title={p.name}>{p.name}</h3>
-                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-50">
-                    <span className="text-sm font-bold text-slate-900">{formatCurrency(p.price)}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wider">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight mt-0.5 sm:mt-1 line-clamp-1" title={p.name}>{p.name}</h3>
+                  <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-50">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">{formatCurrency(p.price)}</span>
+                    <span className="text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase tracking-wider">
                       {p.category}
                     </span>
                   </div>

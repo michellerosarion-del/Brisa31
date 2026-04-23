@@ -83,37 +83,37 @@ export const StoreSettings = ({ storeSettings, showNotification, toNum, onRefres
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <Card className="p-8">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 bg-midnight rounded-2xl flex items-center justify-center text-white shadow-xl shadow-midnight/10">
-            <SettingsIcon className="w-8 h-8" />
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      <Card className="p-4 sm:p-8">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="w-10 h-10 sm:w-16 sm:h-16 bg-slate-900 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-900/10">
+            <SettingsIcon className="w-5 h-5 sm:w-8 sm:h-8" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Configurações da Loja</h3>
-            <p className="text-gray-500 text-sm">Gerencie as informações básicas e preferências do sistema.</p>
+            <h3 className="text-base sm:text-xl font-bold text-gray-900">Configurações</h3>
+            <p className="text-gray-500 text-[10px] sm:text-sm">Preferências do sistema.</p>
           </div>
         </div>
 
-        <form onSubmit={handleUpdateSettings} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleUpdateSettings} className="space-y-6 sm:space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nome da Loja</label>
-              <input name="nome_loja" defaultValue={storeSettings?.nome_loja} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-midnight outline-none" required />
+              <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Nome da Loja</label>
+              <input name="nome_loja" defaultValue={storeSettings?.nome_loja} className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm font-medium" required />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-400 uppercase ml-1">Meta Mensal (R$)</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Meta Mensal (R$)</label>
               <input 
                 name="monthly_goal" 
                 type="text" 
                 inputMode="decimal" 
                 defaultValue={String(storeSettings?.monthly_goal || 0).replace('.', ',')} 
-                onBlur={(e) => {
-                  const val = e.target.value.replace('.', ',');
-                  e.target.value = val;
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9,]/g, '');
+                  if (val !== e.target.value) e.target.value = val;
                 }}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-midnight outline-none font-medium" 
-                placeholder="Ex: 5000,00"
+                className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm font-bold text-slate-900" 
+                placeholder="Ex: 2.500,00"
                 required 
               />
             </div>

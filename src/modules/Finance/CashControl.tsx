@@ -225,18 +225,18 @@ export const CashControl = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row gap-6">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col lg:flex-row gap-3 sm:gap-6">
         <div className="lg:w-2/3">
-          <Card className="p-5 md:p-6 rounded-xl bg-white shadow-sm border border-slate-100 h-full">
+          <Card className="p-3 sm:p-5 md:p-6 rounded-xl bg-white shadow-sm border border-slate-100 h-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm shrink-0">
-                  <Wallet className="w-6 h-6 text-slate-600" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm shrink-0">
+                  <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 tracking-tight">Controle de Caixa</h3>
-                  <p className="text-xs font-medium text-slate-500 mt-0.5">Gestão de entradas e saídas</p>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Financeiro</h3>
+                  <p className="text-[10px] font-medium text-slate-500 mt-0.5">Gestão de entradas e saídas</p>
                 </div>
               </div>
               
@@ -324,25 +324,25 @@ export const CashControl = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card className="p-6 md:p-8 rounded-xl bg-white shadow-sm border border-slate-100">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100">
-                <ArrowUpRight className="w-6 h-6 text-emerald-600" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-8">
+        <Card className="p-4 sm:p-6 md:p-8 rounded-xl bg-white shadow-sm border border-slate-100">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100">
+                <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
               </div>
               <div>
-                <h4 className="text-lg font-semibold text-slate-900 tracking-tight">Entradas</h4>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Saldo no Período</p>
+                <h4 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Entradas</h4>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none mt-1">Total</p>
               </div>
             </div>
             <div className="text-left sm:text-right w-full sm:w-auto">
-              <p className="text-2xl font-bold text-slate-900 break-words">{formatCurrency(cash.inflow.total || 0)}</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 break-words">{formatCurrency(cash.inflow.total || 0)}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-center">
-            <div className="h-64 sm:h-72 relative w-full">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 items-center">
+            <div className="h-48 sm:h-64 sm:h-72 relative w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -372,20 +372,20 @@ export const CashControl = ({
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-4">
               {inflowChartData.map((item) => (
                 <div 
                   key={item.name} 
                   onClick={() => openCategoryDetails(item.name, 'inflow')}
-                  className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all cursor-pointer group"
+                  className="flex items-center justify-between p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-xs font-bold text-slate-800 group-hover:text-midnight transition-colors">{item.name}</span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-midnight transition-colors">{item.name}</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-slate-950">{formatCurrency(item.value)}</p>
-                    <p className="text-[9px] font-bold text-slate-800">{cash.inflow.total > 0 ? ((item.value / cash.inflow.total) * 100).toFixed(1) : 0}%</p>
+                    <p className="text-xs sm:text-sm font-black text-slate-950">{formatCurrency(item.value)}</p>
+                    <p className="text-[8px] sm:text-[9px] font-bold text-slate-600">{cash.inflow.total > 0 ? ((item.value / cash.inflow.total) * 100).toFixed(1) : 0}%</p>
                   </div>
                 </div>
               ))}
@@ -393,24 +393,24 @@ export const CashControl = ({
           </div>
         </Card>
 
-        <Card className="p-6 md:p-8 rounded-xl bg-white shadow-sm border border-slate-100">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center shrink-0">
-                <ArrowDownRight className="w-6 h-6 text-rose-800" />
+        <Card className="p-4 sm:p-6 md:p-8 rounded-xl bg-white shadow-sm border border-slate-100">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-50 rounded-xl flex items-center justify-center shrink-0 border border-rose-100">
+                <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 text-rose-800" />
               </div>
               <div>
-                <h4 className="text-xl font-serif font-bold text-slate-950 tracking-tight">Saídas</h4>
-                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-widest">Saldo Mensal</p>
+                <h4 className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">Saídas</h4>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none mt-1">Total</p>
               </div>
             </div>
             <div className="text-left sm:text-right w-full sm:w-auto">
-              <p className="text-2xl sm:text-3xl font-black text-slate-950 break-words">{formatCurrency(cash.outflow.total || 0)}</p>
+              <p className="text-xl sm:text-2xl font-black text-rose-600 break-words">{formatCurrency(cash.outflow.total || 0)}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-center">
-            <div className="h-64 sm:h-72 relative w-full">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 items-center">
+            <div className="h-48 sm:h-64 sm:h-72 relative w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie

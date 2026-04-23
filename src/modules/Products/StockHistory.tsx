@@ -72,60 +72,47 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="p-4 bg-white shadow-sm border border-slate-100 rounded-xl">
-        <div className="flex flex-col lg:flex-row gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <Card className="p-3 sm:p-4 bg-white shadow-sm border border-slate-100 rounded-xl">
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
           <div className="flex-1 relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
             <input 
               type="text" 
-              placeholder="Buscar por produto, marca, usuário..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all"
+              placeholder="Produto, marca, usuário..." 
+              className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all"
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
           </div>
-          <div className="flex flex-wrap gap-3">
-            <div className="relative group">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <div className="relative group flex-1 sm:flex-initial">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input 
                 type="date" 
-                className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all uppercase tracking-wider"
+                className="w-full pl-9 pr-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] sm:text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all uppercase tracking-wider"
                 value={dateFilter}
                 onChange={(e) => { setDateFilter(e.target.value); if(e.target.value) setMonthFilter(''); setCurrentPage(1); }}
               />
             </div>
             <select 
-              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[140px]"
+              className="flex-1 sm:flex-initial px-3 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[120px] sm:min-w-[140px]"
               value={typeFilter}
               onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
             >
-              <option value="">Todos Tipos</option>
+              <option value="">Filtro</option>
               <option value="entrada">Entrada</option>
               <option value="venda">Venda</option>
               <option value="reposicao">Reposição</option>
               <option value="ajuste">Ajuste</option>
             </select>
-            {(searchTerm || dateFilter || monthFilter || typeFilter) && (
-              <button 
-                onClick={() => {
-                  setSearchTerm('');
-                  setDateFilter('');
-                  setMonthFilter('');
-                  setTypeFilter('');
-                  setCurrentPage(1);
-                }}
-                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-600 transition-colors px-2"
-              >
-                <X className="w-4 h-4" /> Limpar
-              </button>
-            )}
           </div>
         </div>
       </Card>
 
       <Card className="overflow-hidden border border-slate-100 rounded-xl bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -190,6 +177,44 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {paginatedMovements.map(m => (
+            <div key={m.id} className="p-3 bg-white flex flex-col gap-2">
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col">
+                  <span className="text-[13px] font-bold text-slate-900 leading-none">{m.produto}</span>
+                  <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-1">{m.marca} • {m.cor}/{m.tamanho}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${
+                    m.tipo_movimento === 'entrada' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                    m.tipo_movimento === 'venda' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                    m.tipo_movimento === 'reposicao' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                    'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}>
+                    {m.tipo_movimento}
+                  </span>
+                  <span className={`text-[13px] font-black ${m.quantidade > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {m.quantidade > 0 ? `+${m.quantidade}` : m.quantidade}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                <span>{new Date(m.date).toLocaleDateString('pt-BR')} {new Date(m.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setSelectedMovement(m)} className="p-1 text-blue-600 bg-blue-50 rounded-lg">
+                    <Info className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDeleteMovement(m.id)} className="p-1 text-rose-600 bg-rose-50 rounded-lg">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {totalPages > 1 && (

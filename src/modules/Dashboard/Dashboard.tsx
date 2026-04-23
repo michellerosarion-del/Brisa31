@@ -130,21 +130,21 @@ export const Dashboard = ({ sales, products, customers, expenses, storeSettings,
   const recentSales = isAdmin ? sales : sales.filter(s => s.seller_id === user?.uid || s.seller_name === user?.name);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Dashboard</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <Clock className="w-3.5 h-3.5 text-slate-500" />
-            <p className="text-xs font-medium text-slate-500">
-              Período: <span className="text-slate-900 font-semibold">{currentMonthName}</span>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Dashboard</h2>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Clock className="w-3 h-3 text-slate-500" />
+            <p className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider">
+              Período: <span className="text-slate-900 font-bold">{currentMonthName}</span>
             </p>
           </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-2 sm:gap-4">
         <StatCard 
           title={isAdmin ? "Vendas Hoje" : "Minhas Vendas Hoje"} 
           value={formatCurrency(isAdmin ? todayRevenue : sales.filter(s => s.date.startsWith(today) && (s.seller_id === user?.uid || s.seller_name === user?.name)).reduce((sum, s) => sum + getValorVenda(s), 0))} 
@@ -201,16 +201,16 @@ export const Dashboard = ({ sales, products, customers, expenses, storeSettings,
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-8">
         {/* Main Chart */}
-        <Card className="lg:col-span-2 p-6 md:p-8 border-none shadow-sm">
-          <div className="flex items-center justify-between mb-8">
+        <Card className="lg:col-span-2 p-3 sm:p-6 md:p-8 border-none shadow-sm">
+          <div className="flex items-center justify-between mb-4 sm:mb-8">
             <div>
-              <h3 className="text-xl font-semibold text-slate-900 tracking-tight">{isAdmin ? 'Evolução de Vendas' : 'Minha Evolução'}</h3>
-              <p className="text-sm text-slate-500 font-medium">Desempenho dos últimos 7 dias</p>
+              <h3 className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">{isAdmin ? 'Evolução de Vendas' : 'Minha Evolução'}</h3>
+              <p className="text-[10px] sm:text-sm text-slate-500 font-medium">Últimos 7 dias</p>
             </div>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="h-[250px] sm:h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={last7Days}>
                 <defs>
@@ -244,21 +244,21 @@ export const Dashboard = ({ sales, products, customers, expenses, storeSettings,
         </Card>
 
         {/* Goal & Payment Methods */}
-        <div className="space-y-8">
+        <div className="space-y-3 sm:space-y-8">
           {isAdmin && (
-            <Card className="p-6 bg-white border border-slate-100 shadow-sm rounded-xl">
+            <Card className="p-4 sm:p-6 bg-white border border-slate-100 shadow-sm rounded-xl">
               <div className="relative z-10 w-full">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Meta Mensal</h3>
-                <div className="flex flex-col gap-1 mb-6">
-                  <p className="text-3xl font-semibold text-slate-900 leading-tight">
+                <h3 className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-3 sm:mb-4">Meta Mensal</h3>
+                <div className="flex flex-col gap-0.5 mb-4 sm:mb-6">
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
                     {formatCurrency(monthRevenue || 0)}
                   </p>
-                  <p className="text-sm font-medium text-slate-500">
+                  <p className="text-[10px] sm:text-sm font-medium text-slate-500">
                     de {formatCurrency(monthlyGoal || 0)} planejado
                   </p>
                 </div>
                 
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-6">
+                <div className="w-full h-1.5 sm:h-2 bg-slate-100 rounded-full overflow-hidden mb-4 sm:mb-6">
                   <div 
                     className="h-full bg-emerald-500 transition-all duration-1000 ease-out"
                     style={{ width: `${Math.min(100, goalProgress || 0)}%` }}
@@ -277,9 +277,9 @@ export const Dashboard = ({ sales, products, customers, expenses, storeSettings,
           )}
 
           {isAdmin && (
-            <Card className="p-6 md:p-8 border-none shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-8 pb-4 border-b border-slate-50">Meios de Pagamento</h3>
-              <div className="space-y-4">
+            <Card className="p-4 sm:p-6 md:p-8 border-none shadow-sm">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-6 sm:mb-8 pb-3 sm:pb-4 border-b border-slate-50">Pagamentos</h3>
+              <div className="space-y-2 sm:space-y-4">
                 {paymentMethods.map((method) => (
                   <div key={method.name} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100">
                     <div className="flex items-center gap-3">

@@ -11,11 +11,11 @@ interface StatCardProps {
 }
 
 export const StatCard = ({ title, value, icon, colorClass, trend }: StatCardProps) => (
-  <Card className="p-5 flex flex-col gap-4 group min-h-[120px] justify-between border-slate-100 hover:border-slate-200 transition-all duration-300 shadow-sm">
+  <Card className="p-3 sm:p-5 flex flex-col gap-2 sm:gap-4 group min-h-[100px] sm:min-h-[120px] justify-between border-slate-100 hover:border-slate-200 transition-all duration-300 shadow-sm">
     <div className="flex items-start justify-between">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colorClass.replace('text-', 'bg-').replace('-600', '-50')} border ${colorClass.replace('text-', 'border-').replace('-600', '-100')} transition-colors duration-300`}>
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${colorClass.replace('text-', 'bg-').replace('-600', '-50')} border ${colorClass.replace('text-', 'border-').replace('-600', '-100')} transition-colors duration-300`}>
         <div className={`${colorClass}`}>
-          {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-6 h-6' })}
+          {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-5 h-5 sm:w-6 sm:h-6' })}
         </div>
       </div>
       {trend !== undefined && (
@@ -27,10 +27,10 @@ export const StatCard = ({ title, value, icon, colorClass, trend }: StatCardProp
     </div>
 
     <div className="space-y-0.5">
-      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">
+      <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">
         {title}
       </p>
-      <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
+      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
         {value}
       </h3>
     </div>

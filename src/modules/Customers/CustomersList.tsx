@@ -29,27 +29,27 @@ export const CustomersList = ({
   loadMore
 }: CustomersListProps) => {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {customers.map((c: any) => (
           <Card key={c.id} className="relative group hover:shadow-md transition-all duration-300 border-slate-100 rounded-xl overflow-hidden bg-white">
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-xl ${
+            <div className="p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-bold text-base sm:text-xl ${
                     c.classification === 'VIP' ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-600'
                   } border border-slate-100 shadow-sm transition-transform group-hover:scale-105`}>
                     {c.name?.charAt(0) || '?'}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg text-slate-900 leading-tight">{c.name}</h3>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    <h3 className="font-bold text-sm sm:text-lg text-slate-900 leading-tight">{c.name}</h3>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5">
+                      <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full ${
                         c.classification === 'VIP' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {c.classification}
                       </span>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      <span className={`text-[8px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full ${
                         c.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 
                         c.status === 'atenção' ? 'bg-amber-50 text-amber-700' : 
                         'bg-rose-50 text-rose-700'
@@ -60,31 +60,31 @@ export const CustomersList = ({
                   </div>
                 </div>
                 {user?.role === 'admin' && (
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
-                    <button onClick={() => handleEdit('clientes', c)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                      <Edit className="w-4 h-4" />
+                  <div className="flex gap-0.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-0 sm:translate-x-2 sm:group-hover:translate-x-0">
+                    <button onClick={() => handleEdit('clientes', c)} className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                      <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
-                    <button onClick={() => handleDeleteCustomer(c.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => handleDeleteCustomer(c.id)} className="p-1.5 sm:p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 transition-colors group-hover:bg-white group-hover:border-slate-200">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Gasto</p>
-                  <p className="text-lg font-bold text-slate-900 truncate">{formatCurrency(toNum(c.total_spent))}</p>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <div className="p-2 sm:p-3 bg-slate-50 rounded-xl border border-slate-100 transition-colors group-hover:bg-white group-hover:border-slate-200">
+                  <p className="text-[8px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5 sm:mb-1">Total Gasto</p>
+                  <p className="text-base sm:text-lg font-black text-slate-900 truncate">{formatCurrency(toNum(c.total_spent))}</p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 transition-colors group-hover:bg-white group-hover:border-slate-200">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Compras</p>
-                  <p className="text-lg font-bold text-slate-900">{toNum(c.total_purchases)}</p>
+                <div className="p-2 sm:p-3 bg-slate-50 rounded-xl border border-slate-100 transition-colors group-hover:bg-white group-hover:border-slate-200">
+                  <p className="text-[8px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5 sm:mb-1">Compras</p>
+                  <p className="text-base sm:text-lg font-black text-slate-900">{toNum(c.total_purchases)}</p>
                 </div>
               </div>
 
-              <div className="space-y-3 pt-5 border-t border-slate-100">
-                <div className="flex items-center gap-3 text-sm text-slate-600 font-medium">
-                  <Phone className="w-4 h-4 text-slate-400" />
+              <div className="space-y-2 sm:space-y-3 pt-3 sm:pt-5 border-t border-slate-100">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600 font-medium">
+                  <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
                   {c.phone}
                 </div>
                 {c.instagram && (

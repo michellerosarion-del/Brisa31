@@ -102,7 +102,7 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl'
   return (
     <div 
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/50 backdrop-blur-sm pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     >
       <motion.div 
         onClick={(e) => e.stopPropagation()}
@@ -111,13 +111,13 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl'
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className={`bg-white rounded-xl w-full ${maxWidth} overflow-hidden shadow-2xl border border-slate-200`}
       >
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="font-sans font-bold text-slate-800 text-lg tracking-tight">{title}</h2>
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h2 className="font-sans font-bold text-slate-800 text-base sm:text-lg tracking-tight">{title}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-all active:scale-90">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
-        <div className={`${noPadding ? '' : 'p-6'} max-h-[80vh] overflow-y-auto custom-scrollbar`}>
+        <div className={`${noPadding ? '' : 'p-4 sm:p-6'} max-h-[85vh] overflow-y-auto custom-scrollbar`}>
           {children}
         </div>
       </motion.div>
@@ -320,23 +320,23 @@ export const CatalogItem = ({ product, storeSettings, onAddToCart, onClick }: an
       </div>
 
       <div className="p-3 sm:p-6 flex flex-col flex-1">
-        <div className="mb-4">
-          <div className="flex justify-between items-start gap-2 mb-1">
-            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{brand}</span>
+        <div className="mb-2 sm:mb-4">
+          <div className="flex justify-between items-start gap-1 mb-1">
+            <span className="text-[8px] sm:text-[10px] font-black text-slate-700 uppercase tracking-widest">{brand}</span>
             <div className="flex items-center gap-1">
-              <Star className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-500 fill-amber-500" />
-              <span className="text-[10px] font-black text-slate-950">{rating > 0 ? rating.toFixed(1) : '5.0'}</span>
+              <Star className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 text-amber-500 fill-amber-500" />
+              <span className="text-[8px] sm:text-[10px] font-black text-slate-950">{rating > 0 ? rating.toFixed(1) : '5.0'}</span>
             </div>
           </div>
-          <h3 className="text-sm sm:text-lg font-bold text-slate-900 leading-tight group-hover:text-midnight transition-colors line-clamp-2">{product.name}</h3>
-          <p className="text-lg sm:text-2xl font-black text-slate-950 mt-2 tracking-tighter">{formatCurrency(price)}</p>
+          <h3 className="text-xs sm:text-lg font-bold text-slate-900 leading-tight group-hover:text-midnight transition-colors line-clamp-2">{product.name}</h3>
+          <p className="text-base sm:text-2xl font-black text-slate-950 mt-1 sm:mt-2 tracking-tighter">{formatCurrency(price)}</p>
         </div>
 
-        <div className="space-y-4 mt-auto">
-          <div className="flex flex-col gap-3">
+        <div className="space-y-3 sm:space-y-4 mt-auto">
+          <div className="flex flex-col gap-2 sm:gap-3">
             <div>
-              <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest block mb-2">Tamanho</span>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <span className="text-[8px] sm:text-[10px] font-black text-slate-800 uppercase tracking-widest block mb-1 sm:mb-2 text-left">Tam.</span>
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {sizes.map((size: string) => {
                   const isSizeAvailable = (product.allVariations || []).some((v: any) => 
                     (v.tamanho || 'Único') === size && toNum(v.estoque) > 0
@@ -403,13 +403,13 @@ export const CatalogItem = ({ product, storeSettings, onAddToCart, onClick }: an
                 handleAddToCart();
               }}
               disabled={isEsgotado}
-              className={`flex-1 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 sm:py-4 rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-2 ${
                 isEsgotado 
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none' 
                   : 'bg-midnight text-champagne hover:bg-black shadow-midnight/20'
               }`}
             >
-              <ShoppingBag className="w-4 h-4" /> 
+              <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" /> 
               {isEsgotado ? 'Esgotado' : 'Carrinho'}
             </button>
             {!isEsgotado && (
@@ -434,9 +434,9 @@ export const CatalogItem = ({ product, storeSettings, onAddToCart, onClick }: an
 
                   window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`, '_blank');
                 }}
-                className="flex-1 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 bg-champagne text-midnight hover:brightness-110 shadow-champagne/20"
+                className="flex-1 py-3 sm:py-4 rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-2 bg-champagne text-midnight hover:brightness-110 shadow-champagne/20"
               >
-                <Zap className="w-4 h-4 fill-midnight" /> Comprar
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4 fill-midnight" /> Comprar
               </button>
             )}
           </div>
@@ -596,7 +596,7 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
             </button>
 
             {/* Image Section */}
-            <div className="w-full bg-gray-50 relative overflow-hidden flex items-center justify-center h-[45vh] md:h-full shrink-0">
+            <div className="w-full bg-gray-50 relative overflow-hidden flex items-center justify-center h-[35vh] sm:h-[45vh] md:h-full shrink-0">
               <AnimatePresence initial={false} custom={direction} mode="wait">
                 <motion.img 
                   key={currentImageIndex}
@@ -667,34 +667,34 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
 
             {/* Info Section */}
             <div className="w-full flex flex-col bg-white h-full min-h-0 relative">
-              <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{brand}</span>
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <span className="text-[8px] sm:text-[10px] font-black text-slate-800 uppercase tracking-widest">{brand}</span>
                     <div className="h-1 w-1 bg-slate-300 rounded-full" />
-                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{product?.category}</span>
+                    <span className="text-[8px] sm:text-[10px] font-black text-slate-800 uppercase tracking-widest">{product?.category}</span>
                   </div>
-                  <h2 className="text-2xl md:text-3xl font-serif font-black text-slate-950 mb-2 leading-tight">{product?.name}</h2>
-                  <div className="flex items-center gap-4 mb-4">
-                    <p className="text-2xl font-black text-slate-950 tracking-tighter">{formatCurrency(price)}</p>
-                    <div className="flex items-center gap-1 bg-amber-100 px-2 py-1 rounded-lg">
-                      <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
-                      <span className="text-xs font-black text-amber-900">{toNum(product?.rating) > 0 ? toNum(product?.rating).toFixed(1) : '5.0'}</span>
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-serif font-black text-slate-950 mb-1 sm:mb-2 leading-tight">{product?.name}</h2>
+                  <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                    <p className="text-xl sm:text-2xl font-black text-slate-950 tracking-tighter">{formatCurrency(price)}</p>
+                    <div className="flex items-center gap-1 bg-amber-100 px-2 py-0.5 sm:py-1 rounded-lg">
+                      <Star className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-600 fill-amber-600" />
+                      <span className="text-[10px] sm:text-xs font-black text-amber-900">{toNum(product?.rating) > 0 ? toNum(product?.rating).toFixed(1) : '5.0'}</span>
                     </div>
                   </div>
                   {product?.short_description && (
-                    <p className="text-slate-700 leading-relaxed text-sm font-medium">{product?.short_description}</p>
+                    <p className="text-slate-700 leading-relaxed text-xs sm:text-sm font-medium">{product?.short_description}</p>
                   )}
                 </div>
 
-                <div className="space-y-6 mb-8">
+                <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
                   {/* Size Selection */}
                   <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest">Tamanho</span>
-                      <button className="text-[9px] font-bold text-midnight uppercase tracking-widest underline decoration-champagne underline-offset-4">Guia de Medidas</button>
+                    <div className="flex justify-between items-center mb-2 sm:mb-3">
+                      <span className="text-[9px] sm:text-[10px] font-black text-gray-900 uppercase tracking-widest">Tamanho</span>
+                      <button className="text-[8px] sm:text-[9px] font-bold text-midnight uppercase tracking-widest underline decoration-champagne underline-offset-4">Guia de Medidas</button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {sizes.map((size: string) => {
                         const isSizeAvailable = (product?.allVariations || []).some((v: any) => 
                           (v.tamanho || 'Único') === size && toNum(v.estoque) > 0
@@ -704,7 +704,7 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
                             key={size}
                             disabled={!isSizeAvailable && !isEsgotado}
                             onClick={() => setSelectedSize(size)}
-                            className={`min-w-[48px] h-12 rounded-xl text-xs font-black transition-all border-2 flex items-center justify-center ${
+                            className={`min-w-[40px] sm:min-w-[48px] h-10 sm:h-12 rounded-xl text-[10px] sm:text-xs font-black transition-all border-2 flex items-center justify-center ${
                               selectedSize === size 
                                 ? 'bg-midnight text-white border-midnight shadow-lg shadow-midnight/20' 
                                 : isSizeAvailable || isEsgotado
@@ -721,8 +721,8 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
 
                   {/* Color Selection */}
                   <div>
-                    <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest block mb-3">Cor</span>
-                    <div className="flex flex-wrap gap-2">
+                    <span className="text-[9px] sm:text-[10px] font-black text-gray-900 uppercase tracking-widest block mb-2 sm:mb-3">Cor</span>
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {colors.map((color: string) => {
                         const isAvailable = !selectedSize || (product?.allVariations || []).some((v: any) => 
                           (v.tamanho || 'Único') === selectedSize && (v.cor || 'Única') === color && toNum(v.estoque) > 0
@@ -733,7 +733,7 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
                             key={color}
                             disabled={!isAvailable && !isEsgotado}
                             onClick={() => setSelectedColor(color)}
-                            className={`px-4 h-12 rounded-xl text-xs font-black transition-all border-2 flex items-center justify-center ${
+                            className={`px-3 sm:px-4 h-10 sm:h-12 rounded-xl text-[10px] sm:text-xs font-black transition-all border-2 flex items-center justify-center ${
                               selectedColor === color 
                                 ? 'bg-midnight text-white border-midnight shadow-lg shadow-midnight/20' 
                                 : isAvailable || isEsgotado
@@ -750,45 +750,45 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
                 </div>
 
                 {/* Delivery & Payment Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2">
-                    <Truck className="w-4 h-4 text-midnight shrink-0 mt-0.5" />
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-6">
+                  <div className="p-2 sm:p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-1.5 sm:gap-2">
+                    <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-midnight shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-[9px] font-black text-gray-900 uppercase tracking-widest mb-0.5">Entrega Local</h4>
-                      <p className="text-[9px] text-gray-500 font-medium leading-tight">Receba hoje mesmo.</p>
+                      <h4 className="text-[8px] sm:text-[9px] font-black text-gray-900 uppercase tracking-widest mb-0.5">Entrega</h4>
+                      <p className="text-[8px] text-gray-500 font-medium leading-tight">Receba hoje.</p>
                     </div>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2">
-                    <CreditCard className="w-4 h-4 text-midnight shrink-0 mt-0.5" />
+                  <div className="p-2 sm:p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-1.5 sm:gap-2">
+                    <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-midnight shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-[9px] font-black text-gray-900 uppercase tracking-widest mb-0.5">Pagamento</h4>
-                      <p className="text-[9px] text-gray-500 font-medium leading-tight">Cartão, Pix e Dinheiro.</p>
+                      <h4 className="text-[8px] sm:text-[9px] font-black text-gray-900 uppercase tracking-widest mb-0.5">Pagamento</h4>
+                      <p className="text-[8px] text-gray-500 font-medium leading-tight">Cartão ou PIX.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Purchase Buttons - ALWAYS VISIBLE AT BOTTOM */}
-              <div className="p-4 md:p-6 bg-white border-t border-gray-100 shrink-0 z-10">
-                <div className="max-w-[90%] mx-auto flex flex-col sm:flex-row gap-3">
+              <div className="p-3 sm:p-4 md:p-6 bg-white border-t border-gray-100 shrink-0 z-10">
+                <div className="max-w-full sm:max-w-[90%] mx-auto flex flex-col sm:flex-row gap-2 sm:gap-3">
                   {showWarning && (!selectedSize || !selectedColor) && (
-                    <p className="text-rose-500 text-[9px] font-bold text-center animate-pulse absolute -top-6 left-0 right-0">
+                    <p className="text-rose-500 text-[8px] sm:text-[9px] font-bold text-center animate-pulse absolute -top-5 left-0 right-0">
                       Selecione tamanho e cor para continuar.
                     </p>
                   )}
                   <button 
                     onClick={() => handleAddToCart(false)}
-                    className="flex-1 h-12 max-h-[48px] border-2 border-black rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-1 h-10 sm:h-12 border-2 border-midnight rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider sm:tracking-widest hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    <ShoppingBag className="w-4 h-4" />
-                    Adicionar ao carrinho
+                    <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    Carrinho
                   </button>
                   <button 
                     onClick={() => handleAddToCart(true)}
-                    className="flex-1 h-12 max-h-[48px] bg-black text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-gray-900 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-1 h-10 sm:h-12 bg-midnight text-white rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-wider sm:tracking-widest hover:brightness-110 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    <Zap className="w-4 h-4 fill-white" />
-                    Comprar agora
+                    <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
+                    Comprar
                   </button>
                 </div>
               </div>
@@ -950,22 +950,22 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-3xl shadow-soft border border-slate-200">
+      <div className="flex flex-col md:flex-row gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-3xl shadow-soft border border-slate-200">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input 
             type="text"
-            placeholder="Buscar produtos ou marcas..."
+            placeholder="Buscar..."
             value={catalogSearch || ''}
             onChange={(e) => setCatalogSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-base font-bold text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all placeholder:text-slate-400"
+            className="w-full pl-11 pr-4 py-2.5 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm sm:text-base font-bold text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all placeholder:text-slate-400"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
           <select 
             value={catalogCategoryFilter || ''}
             onChange={(e) => setCatalogCategoryFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-base font-black text-slate-800 outline-none focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 min-w-[130px] cursor-pointer transition-all uppercase tracking-widest text-[11px]"
+            className="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-[10px] sm:text-[11px] font-black text-slate-800 outline-none focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 min-w-[100px] sm:min-w-[130px] cursor-pointer transition-all uppercase tracking-widest"
           >
             <option value="">Categoria</option>
             {availableCategories.map((cat: any) => <option key={cat} value={cat}>{cat}</option>)}
@@ -1017,7 +1017,7 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 md:gap-8 products-list">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 md:gap-8 products-list">
         {displayedCatalog.map((product: any) => (
           <CatalogItem 
             key={product.groupKey} 

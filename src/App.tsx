@@ -115,6 +115,7 @@ import { ConfirmModal } from './components/ui/ConfirmModal';
 
 // Layout Components
 import { Sidebar } from './components/layout/Sidebar';
+import { BottomNav } from './components/layout/BottomNav';
 import { Header } from './components/layout/Header';
 
 // Module Components
@@ -1178,7 +1179,7 @@ const App = () => {
           storeSettings={storeSettings}
         />
 
-        <main className={`flex-1 transition-all duration-200 ease-in-out h-screen overflow-y-auto flex flex-col ${isSidebarOpen ? 'lg:pl-72' : 'lg:pl-[72px]'}`}>
+        <main className={`flex-1 transition-all duration-200 ease-in-out h-screen overflow-y-auto flex flex-col pb-20 lg:pb-0 ${isSidebarOpen ? 'lg:pl-72' : 'lg:pl-[72px]'}`}>
           <Header 
             setIsSidebarOpen={setIsSidebarOpen} 
             activeTab={activeTab} 
@@ -1190,7 +1191,7 @@ const App = () => {
             handleLogout={handleLogout}
           />
 
-          <div className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
+          <div className="flex-1 p-3 md:p-6 max-w-7xl mx-auto w-full">
             <AnimatePresence mode="wait">
               <div key={activeTab}>
                 {activeTab === 'dashboard' && (
@@ -1457,6 +1458,12 @@ const App = () => {
           </div>
         </main>
       </div>
+
+      <BottomNav 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        setIsSidebarOpen={setIsSidebarOpen} 
+      />
 
       {/* Notifications */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3">

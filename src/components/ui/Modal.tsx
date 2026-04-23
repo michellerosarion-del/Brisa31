@@ -31,15 +31,15 @@ export const Modal = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`bg-white rounded-xl w-full ${maxWidth} overflow-hidden shadow-2xl border border-slate-200`}
+        className={`bg-white rounded-xl w-full ${maxWidth} overflow-hidden shadow-2xl border border-slate-200 m-2 sm:m-0`}
       >
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="font-sans font-bold text-slate-800 text-lg tracking-tight">{title}</h2>
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h2 className="font-sans font-bold text-slate-800 text-base sm:text-lg tracking-tight">{title}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-all active:scale-90">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
-        <div className={`${noPadding ? '' : 'p-6'} max-h-[80vh] overflow-y-auto custom-scrollbar`}>
+        <div className={`${noPadding ? '' : 'p-4 sm:p-6'} max-h-[85vh] overflow-y-auto custom-scrollbar`}>
           {children}
         </div>
       </motion.div>

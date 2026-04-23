@@ -115,16 +115,16 @@ export const SalesList = ({
   }, { revenue: 0, bruto: 0, liquido: 0, cost: 0, profit: 0, count: 0 });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Gestão de Vendas</h2>
-          <p className="text-sm font-medium text-slate-500 mt-1">Acompanhamento e controle de transações em tempo real.</p>
+          <h2 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">Vendas</h2>
+          <p className="text-[10px] sm:text-sm font-medium text-slate-500 mt-0.5">Histórico em tempo real.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <button 
             onClick={() => onNewSale()}
-            className="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-sm hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2"
+            className="w-full sm:w-auto bg-slate-100 text-slate-900 border border-slate-200 px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-sm hover:bg-slate-200 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" /> Nova Venda
           </button>
@@ -132,7 +132,7 @@ export const SalesList = ({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-4">
         <StatCard 
           title="Faturamento Bruto" 
           value={formatCurrency(summary.bruto)} 
@@ -325,64 +325,64 @@ export const SalesList = ({
           </table>
         </div>
 
-        {/* Mobile View */}
-        <div className="md:hidden space-y-4 p-4">
-          {filteredSales.map(s => {
-            const financials = getSaleFinancials(s);
-            return (
-              <div key={s.id} className={`bg-white rounded-xl p-5 shadow-sm border border-slate-100 space-y-4 transition-all active:scale-[0.98] ${s.status === 'cancelada' ? 'opacity-80 grayscale' : ''}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                      {new Date(s.date).toLocaleDateString('pt-BR')} • {new Date(s.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <h4 className="text-base font-semibold text-slate-900 tracking-tight leading-tight">{s.customer_name || 'Consumidor Final'}</h4>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
-                    s.status === 'cancelada' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                  }`}>
-                    {s.status === 'cancelada' ? 'Cancelada' : 'Concluída'}
+      {/* Mobile View */}
+      <div className="md:hidden space-y-3 p-1">
+        {filteredSales.map(s => {
+          const financials = getSaleFinancials(s);
+          return (
+            <div key={s.id} className={`bg-white rounded-xl p-3 shadow-sm border border-slate-100 space-y-3 transition-all active:scale-[0.98] ${s.status === 'cancelada' ? 'opacity-80 grayscale' : ''}`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                    {new Date(s.date).toLocaleDateString('pt-BR')} • {new Date(s.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <h4 className="text-sm font-bold text-slate-900 tracking-tight leading-tight">{s.customer_name || 'Consumidor Final'}</h4>
+                </div>
+                <span className={`px-1.5 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest border ${
+                  s.status === 'cancelada' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                }`}>
+                  {s.status === 'cancelada' ? 'Cancelada' : 'OK'}
+                </span>
+              </div>
+              
+              <div className="flex flex-wrap gap-1 opacity-80">
+                {s.items?.map((it: any, idx: number) => (
+                  <span key={idx} className="px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[8px] font-medium text-slate-600 truncate max-w-[120px]">
+                    {it.quantity}x {it.product_name}
                   </span>
-                </div>
-                
-                <div className="flex flex-wrap gap-1.5 opacity-80">
-                  {s.items?.map((it: any, idx: number) => (
-                    <span key={idx} className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[9px] font-medium text-slate-600">
-                      {it.quantity}x {it.product_name}
-                    </span>
-                  ))}
-                </div>
+                ))}
+              </div>
 
-                <div className="flex justify-between items-end pt-4 border-t border-slate-50">
-                  <div className="space-y-0.5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valor Total</p>
-                    <p className="text-xl font-bold text-slate-900 tracking-tight">
-                      {formatCurrency(financials.valor_bruto)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {s.status !== 'cancelada' && (
-                      <button 
-                        onClick={() => handleEdit('vendas', s)}
-                        className="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-600 rounded-xl border border-slate-200 shadow-sm active:scale-95 transition-all"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                    )}
-                    {user?.role === 'admin' && (
-                      <button 
-                        onClick={() => handleDeleteSale(s.id)}
-                        className="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl border border-rose-100 shadow-sm active:scale-95 transition-all"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
+              <div className="flex justify-between items-end pt-2 border-t border-slate-50">
+                <div className="space-y-0.5">
+                  <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Total</p>
+                  <p className="text-base font-black text-slate-900 tracking-tighter">
+                    {formatCurrency(financials.valor_bruto)}
+                  </p>
+                </div>
+                <div className="flex gap-1.5">
+                  {s.status !== 'cancelada' && (
+                    <button 
+                      onClick={() => handleEdit('vendas', s)}
+                      className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-slate-900 rounded-lg border border-slate-200 active:scale-95 transition-all"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  )}
+                  {user?.role === 'admin' && (
+                    <button 
+                      onClick={() => handleDeleteSale(s.id)}
+                      className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-400 hover:text-rose-600 rounded-lg border border-rose-100 active:scale-95 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
+      </div>
       </Card>
 
       <div className="flex justify-center pt-2">
