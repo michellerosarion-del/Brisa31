@@ -230,18 +230,34 @@
       },
       "required": ["supplier", "product_id", "quantity"]
     },
-    "StockPurchase": {
-      "title": "StockPurchase",
-      "description": "Stock purchase history",
+    "Purchase": {
+      "title": "Purchase",
+      "description": "Store purchase information from suppliers",
       "type": "object",
       "properties": {
         "date": { "type": "string", "format": "date-time" },
         "supplier_name": { "type": "string" },
-        "product_name": { "type": "string" },
-        "quantity": { "type": "integer" },
-        "value": { "type": "number" }
+        "observations": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "product_id": { "type": "string" },
+              "product_name": { "type": "string" },
+              "cor": { "type": "string" },
+              "tamanho": { "type": "string" },
+              "quantity": { "type": "integer" },
+              "unit_cost": { "type": "number" },
+              "total_cost": { "type": "number" }
+            }
+          }
+        },
+        "total_value": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "cancelled"] },
+        "created_at": { "type": "string", "format": "date-time" }
       },
-      "required": ["supplier_name", "product_name", "quantity", "value"]
+      "required": ["date", "supplier_name", "items", "total_value"]
     }
   },
   "firestore": {
@@ -289,9 +305,13 @@
       "schema": "SupplierOrder",
       "description": "Collection of supplier orders"
     },
+    "/compras": {
+      "schema": "Purchase",
+      "description": "Collection of purchases from suppliers"
+    },
     "/compras_estoque": {
       "schema": "StockPurchase",
-      "description": "Collection of stock purchases"
+      "description": "Collection of legacy stock purchases"
     },
     "/estoque_movimentacoes": {
       "schema": "StockMovement",

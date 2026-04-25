@@ -38,6 +38,8 @@ export type Product = {
   tamanhos?: string[];
   variations?: ProductVariation[];
   has_variations?: boolean;
+  last_purchase_date?: string;
+  last_cost?: number;
 };
 
 export type Customer = {
@@ -227,4 +229,25 @@ export type CartItem = {
   variation_id?: string;
   cash_price?: number;
   card_price?: number;
+};
+
+export type PurchaseItem = {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+  tamanho: string;
+  cor: string;
+};
+
+export type Purchase = {
+  id: string;
+  date: string;
+  supplier_name: string;
+  items: PurchaseItem[];
+  total_value: number;
+  observations?: string;
+  created_at: string;
+  status?: 'active' | 'cancelled';
 };

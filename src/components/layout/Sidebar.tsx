@@ -15,7 +15,8 @@ import {
   BarChart3,
   UserCog,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  Truck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -42,6 +43,7 @@ export const Sidebar = ({ activeTab, setActiveTab, user, handleLogout, isSidebar
       title: 'OPERAÇÃO',
       items: [
         { id: 'vendas', label: 'Vendas', icon: ShoppingBag },
+        { id: 'compras', label: 'Compras', icon: Truck },
         { id: 'produtos', label: 'Produtos', icon: Package },
         { id: 'catalogo', label: 'Link da Loja', icon: Globe },
         { id: 'estoque-historico', label: 'Histórico', icon: History, adminOnly: true },

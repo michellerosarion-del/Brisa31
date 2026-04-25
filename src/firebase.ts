@@ -60,6 +60,8 @@ export const gastosRef = collection(db, 'gastos');
 export const usuariosRef = collection(db, 'usuarios');
 export const estoqueMovimentacoesRef = collection(db, 'estoque_movimentacoes');
 export const configuracoesRef = collection(db, 'configuracoes');
+export const comprasRef = collection(db, 'compras');
+export const fornecedoresRef = collection(db, 'fornecedores');
 
 // Auth helpers
 export { 
@@ -125,19 +127,22 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  console.error('Firestore Error Details: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Test connectivity on boot
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log('Firestore connection verified');
-  } catch (error) {
-    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
-      console.error("Firestore connectivity issue: Please check your Firebase configuration or internet connection.");
-    }
-  }
+export function handleStorageError(error: any) {
+  const errDetails = {
+    code: error?.code,
+    message: error?.message,
+    name: error?.name,
+    serverResponse: error?.serverResponse,
+    authStatus: !!auth.currentUser,
+    userId: auth.currentUser?.uid
+  };
+  console.error('Storage Error Diagnostic:', JSON.stringify(errDetails));
+  return `Erro no Firebase Storage (${error?.code || 'unknown'}): ${error?.message || 'Erro desconhecido'}`;
 }
-testConnection();
+
+// Test connectivity on boot - REMOVED to save read quota
+// async function testConnection() { ... }

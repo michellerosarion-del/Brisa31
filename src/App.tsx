@@ -13,6 +13,7 @@ import {
   estoqueMovimentacoesRef,
   configuracoesRef,
   handleFirestoreError,
+  handleStorageError,
   OperationType,
   storage,
   storageRef,
@@ -34,7 +35,8 @@ import {
   where,
   increment,
   runTransaction,
-  collection
+  collection,
+  onSnapshot
 } from 'firebase/firestore';
 import { 
   updatePassword,
@@ -131,7 +133,8 @@ import { CatalogTab } from './modules/Catalog/CatalogTab';
 import { UserProfile } from './modules/Settings/UserProfile';
 import { StoreSettings } from './modules/Settings/StoreSettings';
 import { StockHistoryContent } from './modules/Products/StockHistory';
-import { CatalogPage } from './components/Catalog';
+import { Purchases } from './modules/Purchases/Purchases';
+import { CatalogPage } from './pages/Catalog';
 import { QuickSaleModal } from './modules/Sales/QuickSaleModal';
 
 // Form Components
@@ -210,13 +213,13 @@ const App = () => {
   const [isQuickSaleModalOpen, setIsQuickSaleModalOpen] = useState(false);
   const [quickSaleTab, setQuickSaleTab] = useState<'products' | 'cart'>('products');
   
-  // Pagination State
-  const [productsLimit, setProductsLimit] = useState(500);
-  const [salesLimit, setSalesLimit] = useState(100);
-  const [customersLimit, setCustomersLimit] = useState(100);
-  const [expensesLimit, setExpensesLimit] = useState(100);
-  const [stockLimit, setStockLimit] = useState(100);
-  const [adsLimit, setAdsLimit] = useState(100);
+  // Pagination State - Reduced initial limits to save quota
+  const [productsLimit, setProductsLimit] = useState(100);
+  const [salesLimit, setSalesLimit] = useState(50);
+  const [customersLimit, setCustomersLimit] = useState(50);
+  const [expensesLimit, setExpensesLimit] = useState(50);
+  const [stockLimit, setStockLimit] = useState(50);
+  const [adsLimit, setAdsLimit] = useState(50);
   
   // Sales Filters
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
@@ -287,80 +290,112 @@ const App = () => {
     }
   };
 
-  // --- Handlers: Data Fetching (Optimized) ---
-  // Using a manual trigger and cache-aware fetching to reduce reads
-  const fetchCollection = useCallback(async (collectionRef: any, setter: (data: any) => void, orderField = 'createdAt', lmt = 100, direction: 'asc' | 'desc' = 'desc') => {
-    try {
-      // getDocs will first check local cache if persistence is enabled
-      const querySnapshot = await getDocs(query(collectionRef, orderBy(orderField, direction), limit(lmt)));
-      const data = querySnapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...(docSnapshot.data() as any) }));
-      setter(data);
-    } catch (err) {
-      console.error(`Error fetching ${collectionRef.id}:`, err);
-    }
+  // --- Handlers: Real-time Data Listeners ---
+  useEffect(() => {
+    if (!user) return;
+
+    // Listeners for essential collections
+    const unsubs: (() => void)[] = [];
+
+    // 1. Products
+    const qProd = query(produtosRef, orderBy('name', 'asc'), limit(productsLimit));
+    unsubs.push(onSnapshot(qProd, (snap) => {
+      setProducts(snap.docs.map(d => {
+        const data = d.data();
+        const variations = data.variations || data.variacoes || data.options || [];
+        const normalizedVariations = variations.map((v: any) => ({
+          ...v,
+          id: v.id || Math.random().toString(36).substr(2, 9),
+          cor: v.cor || v.color || 'Única',
+          tamanho: v.tamanho || v.size || 'Único',
+          estoque: toNum(v.estoque || v.stock || 0)
+        }));
+        
+        // Ensure total stock is recalculated if variations exist
+        const totalStock = variations.length > 0 
+          ? normalizedVariations.reduce((sum: number, v: any) => sum + v.estoque, 0)
+          : toNum(data.stock);
+
+        return { 
+          id: d.id, 
+          ...data,
+          variations: normalizedVariations,
+          has_variations: data.has_variations === true || variations.length > 0,
+          stock: totalStock // Sync main stock with variations sum
+        } as Product;
+      }));
+    }, err => handleFirestoreError(err, OperationType.LIST, 'produtos')));
+
+    // 2. Sales
+    const qSales = query(vendasRef, orderBy('date', 'desc'), limit(salesLimit));
+    unsubs.push(onSnapshot(qSales, (snap) => {
+      setSales(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
+    }, err => handleFirestoreError(err, OperationType.LIST, 'vendas')));
+
+    // 3. Customers
+    const qCust = query(clientesRef, orderBy('name', 'asc'), limit(customersLimit));
+    unsubs.push(onSnapshot(qCust, (snap) => {
+      setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
+    }, err => handleFirestoreError(err, OperationType.LIST, 'clientes')));
+
+    // 4. Expenses
+    const qExp = query(gastosRef, orderBy('date', 'desc'), limit(expensesLimit));
+    unsubs.push(onSnapshot(qExp, (snap) => {
+      setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)));
+    }, err => handleFirestoreError(err, OperationType.LIST, 'gastos')));
+
+    // 5. Users/Sellers
+    const qUsers = query(usuariosRef, orderBy('name', 'asc'), limit(100));
+    unsubs.push(onSnapshot(qUsers, (snap) => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, err => handleFirestoreError(err, OperationType.LIST, 'usuarios')));
+
+    // 6. Config
+    unsubs.push(onSnapshot(configuracoesRef, (snap) => {
+      if (!snap.empty) {
+        setStoreSettings({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
+      }
+    }, err => handleFirestoreError(err, OperationType.LIST, 'configuracoes')));
+
+    // 7. Recent Stock Movements
+    const qStock = query(estoqueMovimentacoesRef, orderBy('date', 'desc'), limit(stockLimit));
+    unsubs.push(onSnapshot(qStock, (snap) => {
+      setStockMovements(snap.docs.map(d => ({ id: d.id, ...d.data() } as StockMovement)));
+    }, err => handleFirestoreError(err, OperationType.LIST, 'estoque_movimentacoes')));
+
+    return () => unsubs.forEach(fn => fn());
+  }, [user, productsLimit, salesLimit, customersLimit, expensesLimit, stockLimit]);
+
+  // Periodic Refresh replaced by onSnapshot logic above
+  const fetchData = useCallback(async () => {
+    // This function is now mostly redundant but kept for any manual force refresh needs
+    // We already use onSnapshot for live updates.
+    console.log("Using live synchronization...");
   }, []);
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-    
-    // We only fetch everything once at start, as requested to reduce onSnapshot/reads
-    // Subsequent updates happen manually or via CRUD refreshes
-    try {
-      // 1. Fetch Store Settings
-      const settingsSnap = await getDocs(configuracoesRef);
-      if (!settingsSnap.empty) {
-        setStoreSettings({ id: settingsSnap.docs[0].id, ...settingsSnap.docs[0].data() } as any);
-      }
-
-      // 2. Fetch Main Collections
-      await Promise.all([
-        fetchCollection(produtosRef, setProducts, 'name', productsLimit, 'asc'),
-        fetchCollection(vendasRef, setSales, 'date', salesLimit),
-        fetchCollection(clientesRef, setCustomers, 'name', customersLimit, 'asc'),
-        fetchCollection(gastosRef, setExpenses, 'date', expensesLimit),
-        fetchCollection(usuariosRef, setUsers, 'name', 100, 'asc'),
-      ]);
-    } catch (err: any) {
-      console.error("Fetch data failed", err);
-    }
-  }, [user, fetchCollection, productsLimit, salesLimit, customersLimit, expensesLimit]);
-
-  useEffect(() => {
-    fetchData();
-  }, [user, fetchData]);
-
-  // Periodic Refresh (Disabled to save reads as requested)
-  // user can refresh manually and CRUD handles local refresh
-  
   const loadMoreProducts = useCallback(() => {
-    setProductsLimit(prev => prev + 50);
-    fetchCollection(produtosRef, setProducts, 'name', productsLimit + 50, 'asc');
-  }, [fetchCollection, productsLimit]);
+    setProductsLimit(prev => Math.min(prev + 50, 2000));
+  }, []);
 
   const loadMoreSales = useCallback(() => {
-    setSalesLimit(prev => prev + 50);
-    fetchCollection(vendasRef, setSales, 'date', salesLimit + 50);
-  }, [fetchCollection, salesLimit]);
+    setSalesLimit(prev => Math.min(prev + 50, 1000));
+  }, []);
 
   const loadMoreCustomers = useCallback(() => {
-    setCustomersLimit(prev => prev + 50);
-    fetchCollection(clientesRef, setCustomers, 'name', customersLimit + 50, 'asc');
-  }, [fetchCollection, customersLimit]);
+    setCustomersLimit(prev => Math.min(prev + 50, 1000));
+  }, []);
 
   const loadMoreExpenses = useCallback(() => {
-    setExpensesLimit(prev => prev + 50);
-    fetchCollection(gastosRef, setExpenses, 'date', expensesLimit + 50);
-  }, [fetchCollection, expensesLimit]);
+    setExpensesLimit(prev => Math.min(prev + 50, 1000));
+  }, []);
 
   const loadMoreStock = useCallback(() => {
-    setStockLimit(prev => prev + 50);
-    fetchCollection(estoqueMovimentacoesRef, setStockMovements, 'date', stockLimit + 50);
-  }, [fetchCollection, stockLimit]);
+    setStockLimit(prev => Math.min(prev + 50, 500));
+  }, []);
 
   const loadMoreAds = useCallback(() => {
-    setAdsLimit(prev => prev + 50);
-    fetchCollection(collection(db, 'anuncios'), setAds, 'date', adsLimit + 50);
-  }, [fetchCollection, adsLimit]);
+    setAdsLimit(prev => Math.min(prev + 50, 500));
+  }, []);
 
   // --- Handlers ---
   const handleEdit = (type: string, item: any) => {
@@ -390,16 +425,42 @@ const App = () => {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUploading(true);
+    console.log('Iniciando processo de cadastro/edição de produto...');
+    
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData);
 
     try {
-      const uploadedUrls = [];
+      // Validar tamanho dos arquivos (2MB = 2 * 1024 * 1024 bytes)
+      const MAX_FILE_SIZE = 2 * 1024 * 1024;
       for (const file of selectedFiles) {
-        const fileRef = storageRef(storage, `produtos/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(fileRef, file);
-        const url = await getDownloadURL(snapshot.ref);
-        uploadedUrls.push(url);
+        if (file.size > MAX_FILE_SIZE) {
+          throw new Error(`O arquivo ${file.name} excede o limite de 2MB.`);
+        }
+      }
+
+      const uploadedUrls = [];
+      console.log(`Diagnostic: Starting upload for ${selectedFiles.length} files. Auth state: ${!!auth.currentUser ? 'Logged in' : 'Not logged in'}`);
+      
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        try {
+          console.log(`Diagnostic [Step 1/3]: Preparing ref for file ${i + 1}/${selectedFiles.length}: ${file.name}`);
+          const fileRef = storageRef(storage, `produtos/${Date.now()}_${file.name}`);
+          
+          console.log(`Diagnostic [Step 2/3]: Calling uploadBytes for ${file.name}...`);
+          const snapshot = await uploadBytes(fileRef, file);
+          console.log(`Diagnostic [Step 2/3]: uploadBytes SUCCESS for ${file.name}`);
+          
+          console.log(`Diagnostic [Step 3/3]: Calling getDownloadURL for ${file.name}...`);
+          const url = await getDownloadURL(snapshot.ref);
+          uploadedUrls.push(url);
+          console.log(`Diagnostic [Step 3/3]: getDownloadURL SUCCESS: ${url}`);
+        } catch (uploadError: any) {
+          const detailedErrorMessage = handleStorageError(uploadError);
+          showNotification(detailedErrorMessage, 'error');
+          throw new Error(detailedErrorMessage);
+        }
       }
 
       const finalImages = [...existingImages, ...uploadedUrls];
@@ -427,6 +488,7 @@ const App = () => {
         updatedAt: new Date().toISOString()
       };
 
+      console.log('Salvando dados no Firestore...');
       if (editingItem) {
         await updateDoc(doc(db, 'produtos', editingItem.id), productData);
         showNotification('Produto atualizado!');
@@ -434,10 +496,15 @@ const App = () => {
         await addDoc(produtosRef, { ...productData, createdAt: new Date().toISOString() });
         showNotification('Produto cadastrado!');
       }
+      console.log('Processo finalizado com sucesso.');
       setIsModalOpen(false);
-      fetchData();
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'produtos');
+      console.error('Erro no processo de salvamento do produto:', err);
+      showNotification(err.message || 'Erro ao salvar produto', 'error');
+      // Adicionalmente loga no formato padrão se for erro do Firestore
+      if (err.code || err.name === 'FirebaseError') {
+        handleFirestoreError(err, OperationType.WRITE, 'produtos');
+      }
     } finally {
       setIsUploading(false);
     }
@@ -568,7 +635,6 @@ const App = () => {
       setCart([]);
       setEditingSale(null);
       setSaleDiscount(0);
-      fetchData();
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'vendas');
     }
@@ -641,7 +707,6 @@ const App = () => {
         });
 
         showNotification('Venda excluída e estoque restaurado!');
-        fetchData();
       } catch (err: any) {
         handleFirestoreError(err, OperationType.DELETE, 'vendas');
       }
@@ -668,7 +733,6 @@ const App = () => {
         showNotification('Cliente cadastrado!');
       }
       setIsModalOpen(false);
-      fetchData();
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'clientes');
     }
@@ -697,7 +761,6 @@ const App = () => {
       }
       showNotification('Lançamento salvo!');
       setIsModalOpen(false);
-      fetchData();
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'gastos');
     }
@@ -723,7 +786,6 @@ const App = () => {
         showNotification('Usuário cadastrado!');
       }
       setIsModalOpen(false);
-      fetchData();
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'usuarios');
     }
@@ -762,7 +824,6 @@ const App = () => {
         showNotification('Anúncio cadastrado!');
       }
       setIsModalOpen(false);
-      fetchData();
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'anuncios');
     }
@@ -821,7 +882,6 @@ const App = () => {
         });
       });
       showNotification('Estoque atualizado!');
-      fetchData();
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'produtos');
     }
@@ -833,7 +893,6 @@ const App = () => {
     try {
       await updateDoc(doc(db, 'produtos', id), { is_featured: !p.is_featured });
       showNotification(p.is_featured ? 'Destaque removido' : 'Produto destacado!');
-      fetchData();
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'produtos');
     }
@@ -935,7 +994,6 @@ const App = () => {
           }
         });
         showNotification('Item cancelado e valores atualizados!');
-        fetchData();
       } catch (err: any) {
         handleFirestoreError(err, OperationType.WRITE, 'vendas');
       }
@@ -1024,7 +1082,18 @@ const App = () => {
   // --- Image Handlers ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+      const files = Array.from(e.target.files);
+      const MAX_FILE_SIZE = 2 * 1024 * 1024;
+      
+      const validFiles = files.filter(file => {
+        if (file.size > MAX_FILE_SIZE) {
+          showNotification(`Arquivo ${file.name} muito grande (máximo 2MB)`, 'error');
+          return false;
+        }
+        return true;
+      });
+
+      setSelectedFiles(prev => [...prev, ...validFiles]);
     }
   };
 
@@ -1038,7 +1107,7 @@ const App = () => {
 
   // --- Render ---
   if (isCatalogRoute) {
-    return <CatalogPage />;
+    return <CatalogPage initialProducts={products} initialSettings={storeSettings} />;
   }
 
   if (authLoading) {
@@ -1253,7 +1322,6 @@ const App = () => {
                         try {
                           await updateDoc(doc(db, 'produtos', id), { status: 'inativo' });
                           showNotification('Produto inativado');
-                          fetchData();
                         } catch (err: any) {
                           handleFirestoreError(err, OperationType.WRITE, `produtos/${id}`);
                         }
@@ -1287,7 +1355,6 @@ const App = () => {
                         try {
                           await deleteDoc(doc(db, 'clientes', id));
                           showNotification('Cliente excluído');
-                          fetchData();
                         } catch (err: any) {
                           handleFirestoreError(err, OperationType.DELETE, `clientes/${id}`);
                         }
@@ -1321,7 +1388,6 @@ const App = () => {
                         try {
                           await deleteDoc(doc(db, 'gastos', id));
                           showNotification('Lançamento excluído');
-                          fetchData();
                         } catch (err: any) {
                           handleFirestoreError(err, OperationType.DELETE, `gastos/${id}`);
                         }
@@ -1361,7 +1427,6 @@ const App = () => {
                         try {
                           await deleteDoc(doc(db, 'anuncios', id));
                           showNotification('Anúncio excluído');
-                          fetchData();
                         } catch (err: any) {
                           handleFirestoreError(err, OperationType.DELETE, `anuncios/${id}`);
                         }
@@ -1387,7 +1452,6 @@ const App = () => {
                         try {
                           await deleteDoc(doc(db, 'usuarios', id));
                           showNotification('Usuário excluído');
-                          fetchData();
                         } catch (err: any) {
                           handleFirestoreError(err, OperationType.DELETE, `usuarios/${id}`);
                         }
@@ -1452,6 +1516,10 @@ const App = () => {
                     toNum={toNum}
                     loadMore={loadMoreStock}
                   />
+                )}
+
+                {activeTab === 'compras' && (
+                  <Purchases />
                 )}
               </div>
             </AnimatePresence>

@@ -10,11 +10,11 @@ import {
   StoreSettings 
 } from '../components/Catalog';
 import { db } from '../firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, where, limit } from 'firebase/firestore';
 
-export const CatalogPage = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>({ 
+export const CatalogPage = ({ initialProducts, initialSettings }: { initialProducts?: Product[], initialSettings?: StoreSettings }) => {
+  const [products, setProducts] = useState<Product[]>(initialProducts || []);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(initialSettings || { 
     id: 'default', 
     nome_loja: 'Brisa 31 | Moda Masculina', 
     telefone_whatsapp: '',
@@ -29,6 +29,7 @@ export const CatalogPage = () => {
   const [catalogColorFilter, setCatalogColorFilter] = useState('');
   const [catalogPriceFilter, setCatalogPriceFilter] = useState<number | ''>('');
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: string }[]>([]);
+  const [loading, setLoading] = useState(!initialProducts || initialProducts.length === 0);
 
   const showNotification = (message: string, type: string = 'success') => {
     const id = Date.now();
@@ -39,12 +40,46 @@ export const CatalogPage = () => {
   };
 
   useEffect(() => {
+    if (initialProducts && initialProducts.length > 0) {
+      setProducts(initialProducts);
+      setLoading(false);
+      return;
+    }
+
     const fetchCatalogData = async () => {
       try {
-        // Fetch Products - Optimized for Catalog
-        const q = query(collection(db, 'produtos'), orderBy('name', 'asc'));
+        setLoading(true);
+        // Fetch Products - Optimized for Catalog with limit
+        const q = query(
+          collection(db, 'produtos'), 
+          where('status', '==', 'ativo'),
+          orderBy('name', 'asc'),
+          limit(100)
+        );
         const snap = await getDocs(q);
-        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
+        const list = snap.docs.map(doc => {
+          const data = doc.data();
+          const variations = data.variations || data.variacoes || data.options || [];
+          const normalizedVariations = variations.map((v: any) => ({
+            ...v,
+            id: v.id || Math.random().toString(36).substr(2, 9),
+            cor: v.cor || v.color || 'Única',
+            tamanho: v.tamanho || v.size || 'Único',
+            estoque: Number(v.estoque || v.stock || 0)
+          }));
+          
+          const totalStock = variations.length > 0 
+            ? normalizedVariations.reduce((sum: number, v: any) => sum + v.estoque, 0)
+            : Number(data.stock || 0);
+
+          return { 
+            id: doc.id, 
+            ...data,
+            variations: normalizedVariations,
+            has_variations: data.has_variations === true || variations.length > 0,
+            stock: totalStock
+          } as Product;
+        });
         setProducts(list || []);
 
         // Fetch Config
@@ -55,11 +90,13 @@ export const CatalogPage = () => {
       } catch (error) {
         console.error("Error fetching catalog data:", error);
         showNotification("Erro ao carregar o catálogo. Tente novamente mais tarde.", "error");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchCatalogData();
-  }, []);
+  }, [initialProducts]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[calc(5rem+env(safe-area-inset-bottom))]">

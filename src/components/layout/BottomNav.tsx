@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, ShoppingBag, Package, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, Package, Menu, Truck } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -11,6 +11,7 @@ export const BottomNav = ({ activeTab, setActiveTab, setIsSidebarOpen }: BottomN
   const items = [
     { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
     { id: 'vendas', label: 'Vendas', icon: ShoppingBag },
+    { id: 'compras', label: 'Compras', icon: Truck },
     { id: 'produtos', label: 'Produtos', icon: Package },
     { id: 'clientes', label: 'Clientes', icon: Users },
   ];

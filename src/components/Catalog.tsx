@@ -37,7 +37,7 @@ export type ProductVariation = {
   cor: string;
   tamanho: string;
   estoque: number;
-  brand: string;
+  brand?: string;
 };
 
 export type Product = {
@@ -338,13 +338,14 @@ export const CatalogItem = ({ product, storeSettings, onAddToCart, onClick }: an
               <span className="text-[8px] sm:text-[10px] font-black text-slate-800 uppercase tracking-widest block mb-1 sm:mb-2 text-left">Tam.</span>
               <div className="flex flex-wrap gap-1 sm:gap-2">
                 {sizes.map((size: string) => {
+                  const hasRegistration = (product.allVariations || []).some((v: any) => (v.tamanho || 'Único') === size);
                   const isSizeAvailable = (product.allVariations || []).some((v: any) => 
                     (v.tamanho || 'Único') === size && toNum(v.estoque) > 0
                   );
                   return (
                     <button
                       key={size}
-                      disabled={!isSizeAvailable && !isEsgotado}
+                      disabled={!hasRegistration}
                       onClick={() => setSelectedSize(size)}
                       className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[10px] sm:text-[11px] font-black transition-all border-2 ${
                         selectedSize === size 
@@ -365,6 +366,9 @@ export const CatalogItem = ({ product, storeSettings, onAddToCart, onClick }: an
               <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest block mb-2">Cor</span>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {colors.map((color: string) => {
+                  const hasRegistration = !selectedSize || (product.allVariations || []).some((v: any) => 
+                    (v.tamanho || 'Único') === selectedSize && (v.cor || 'Única') === color
+                  );
                   const isAvailable = !selectedSize || (product.allVariations || []).some((v: any) => 
                     (v.tamanho || 'Único') === selectedSize && (v.cor || 'Única') === color && toNum(v.estoque) > 0
                   );
@@ -372,7 +376,7 @@ export const CatalogItem = ({ product, storeSettings, onAddToCart, onClick }: an
                   return (
                     <button
                       key={color}
-                      disabled={!isAvailable && !isEsgotado}
+                      disabled={!hasRegistration}
                       onClick={() => setSelectedColor(color)}
                       className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[10px] sm:text-[11px] font-black transition-all border-2 ${
                         selectedColor === color 
@@ -501,11 +505,15 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
 
   useEffect(() => {
     if (selectedSize && product) {
+      const allColors = Array.from(new Set((product?.allVariations || [])
+        .filter((v: any) => (v.tamanho || 'Único') === selectedSize)
+        .map((v: any) => v.cor || 'Única')));
+      
       const availableColors = Array.from(new Set((product?.allVariations || [])
         .filter((v: any) => (v.tamanho || 'Único') === selectedSize && toNum(v.estoque) > 0)
         .map((v: any) => v.cor || 'Única')));
       
-      if (selectedColor && !availableColors.includes(selectedColor)) {
+      if (selectedColor && !allColors.includes(selectedColor)) {
         setSelectedColor('');
       }
       
@@ -696,13 +704,14 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
                     </div>
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {sizes.map((size: string) => {
+                        const hasRegistration = (product?.allVariations || []).some((v: any) => (v.tamanho || 'Único') === size);
                         const isSizeAvailable = (product?.allVariations || []).some((v: any) => 
                           (v.tamanho || 'Único') === size && toNum(v.estoque) > 0
                         );
                         return (
                           <button
                             key={size}
-                            disabled={!isSizeAvailable && !isEsgotado}
+                            disabled={!hasRegistration}
                             onClick={() => setSelectedSize(size)}
                             className={`min-w-[40px] sm:min-w-[48px] h-10 sm:h-12 rounded-xl text-[10px] sm:text-xs font-black transition-all border-2 flex items-center justify-center ${
                               selectedSize === size 
@@ -724,6 +733,9 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
                     <span className="text-[9px] sm:text-[10px] font-black text-gray-900 uppercase tracking-widest block mb-2 sm:mb-3">Cor</span>
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {colors.map((color: string) => {
+                        const hasRegistration = !selectedSize || (product?.allVariations || []).some((v: any) => 
+                          (v.tamanho || 'Único') === selectedSize && (v.cor || 'Única') === color
+                        );
                         const isAvailable = !selectedSize || (product?.allVariations || []).some((v: any) => 
                           (v.tamanho || 'Único') === selectedSize && (v.cor || 'Única') === color && toNum(v.estoque) > 0
                         );
@@ -731,7 +743,7 @@ export const ProductDetailsModal = ({ product, isOpen, onClose, onAddToCart, sto
                         return (
                           <button
                             key={color}
-                            disabled={!isAvailable && !isEsgotado}
+                            disabled={!hasRegistration}
                             onClick={() => setSelectedColor(color)}
                             className={`px-3 sm:px-4 h-10 sm:h-12 rounded-xl text-[10px] sm:text-xs font-black transition-all border-2 flex items-center justify-center ${
                               selectedColor === color 
@@ -866,17 +878,27 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
 
   // Group products by Name and Brand to show all available colors and sizes in one card
   const groupedProducts = (products || []).reduce((acc: any, p: any) => {
-    if (p.has_variations && p.variations) {
+    // Normalization: Ensure p.variations is available even if it's named differently (p.variacoes, p.options)
+    const variations = p.variations || p.variacoes || p.options || [];
+    const hasVariations = p.has_variations === true || variations.length > 0;
+
+    if (hasVariations) {
       // Products with variations are already grouped by model
       const key = `var-${p.id}`;
-      const totalStock = p.variations.reduce((sum: number, v: any) => sum + toNum(v.estoque), 0);
+      const totalStock = variations.reduce((sum: number, v: any) => sum + toNum(v.estoque || v.stock || 0), 0);
       
       acc[key] = {
         ...p,
         groupKey: key,
-        availableSizes: Array.from(new Set(p.variations.filter((v: any) => toNum(v.estoque) > 0).map((v: any) => v.tamanho))),
-        availableColors: Array.from(new Set(p.variations.filter((v: any) => toNum(v.estoque) > 0).map((v: any) => v.cor))),
-        allVariations: p.variations,
+        // Include ALL variations in availableSizes/Colors, not just those with stock > 0
+        availableSizes: Array.from(new Set(variations.map((v: any) => v.tamanho || v.size || 'Único'))),
+        availableColors: Array.from(new Set(variations.map((v: any) => v.cor || v.color || 'Única'))),
+        allVariations: variations.map((v: any) => ({
+          ...v,
+          tamanho: v.tamanho || v.size || 'Único',
+          cor: v.cor || v.color || 'Única',
+          estoque: toNum(v.estoque || v.stock || 0)
+        })),
         totalStock: totalStock
       };
     } else {
@@ -888,24 +910,29 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
         acc[key] = { 
           ...p, 
           groupKey: key,
-          availableSizes: toNum(p.stock) > 0 ? (p.tamanho ? [p.tamanho] : []) : [], 
-          availableColors: toNum(p.stock) > 0 ? (p.cor ? [p.cor] : []) : [],
+          // For non-variation products, we still check overall stock for "available" lists
+          // But to be consistent with variation products, we should probably show them even if 0 stock?
+          // Let's include them if they have a value, so they appear but might show as empty/grey.
+          availableSizes: p.tamanho ? [p.tamanho] : ['Único'], 
+          availableColors: p.cor ? [p.cor] : ['Única'],
           totalStock: toNum(p.stock),
-          allVariations: [{ tamanho: p.tamanho, cor: p.cor, estoque: p.stock }],
+          allVariations: [{ tamanho: p.tamanho || 'Único', cor: p.cor || 'Única', estoque: p.stock || 0 }],
           // Collect all images from all products in this group
           allImages: [...pImages]
         };
       } else {
-        if (toNum(p.stock) > 0) {
-          if (p.tamanho && !acc[key].availableSizes.includes(p.tamanho)) {
-            acc[key].availableSizes.push(p.tamanho);
-          }
-          if (p.cor && !acc[key].availableColors.includes(p.cor)) {
-            acc[key].availableColors.push(p.cor);
-          }
+        const size = p.tamanho || 'Único';
+        const color = p.cor || 'Única';
+        
+        if (!acc[key].availableSizes.includes(size)) {
+          acc[key].availableSizes.push(size);
         }
+        if (!acc[key].availableColors.includes(color)) {
+          acc[key].availableColors.push(color);
+        }
+        
         acc[key].totalStock += toNum(p.stock);
-        acc[key].allVariations.push({ tamanho: p.tamanho, cor: p.cor, estoque: p.stock });
+        acc[key].allVariations.push({ tamanho: size, cor: color, estoque: p.stock || 0 });
         // Add images if they are not already in the list
         pImages.forEach((img: string) => {
           if (img && !acc[key].allImages.includes(img)) {
@@ -923,8 +950,8 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
     return (a.name || '').localeCompare(b.name || '');
   });
 
-  const availableSizes = Array.from(new Set((products || []).flatMap((p: any) => p.has_variations && p.variations ? p.variations.filter((v: any) => toNum(v.estoque) > 0).map((v: any) => v.tamanho) : (toNum(p.stock) > 0 ? [p.tamanho] : [])))).filter(Boolean).sort();
-  const availableColors = Array.from(new Set((products || []).flatMap((p: any) => p.has_variations && p.variations ? p.variations.filter((v: any) => toNum(v.estoque) > 0).map((v: any) => v.cor) : (toNum(p.stock) > 0 ? [p.cor] : [])))).filter(Boolean).sort();
+  const availableSizes = Array.from(new Set((products || []).flatMap((p: any) => (p.variations || p.variacoes || p.options || []).length > 0 ? (p.variations || p.variacoes || p.options).map((v: any) => v.tamanho || v.size || 'Único') : [p.tamanho || 'Único']))).filter(Boolean).sort();
+  const availableColors = Array.from(new Set((products || []).flatMap((p: any) => (p.variations || p.variacoes || p.options || []).length > 0 ? (p.variations || p.variacoes || p.options).map((v: any) => v.cor || v.color || 'Única') : [p.cor || 'Única']))).filter(Boolean).sort();
   const availableCategories = Array.from(new Set((products || []).map((p: any) => p.category))).filter(Boolean).sort();
 
   const filteredCatalog = catalogItems.filter((p: any) => {
@@ -1168,176 +1195,4 @@ export const CatalogContent = ({ products, storeSettings, catalogSearch, setCata
   );
 };
 
-export const CatalogPage = ({ 
-  user = null, 
-  products: initialProducts, 
-  storeSettings: initialSettings
-}: { 
-  user?: any; 
-  products?: Product[]; 
-  storeSettings?: StoreSettings;
-}) => {
-  const [products, setProducts] = useState<Product[]>(initialProducts || []);
-  const [loading, setLoading] = useState(true);
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>(initialSettings || { 
-    id: 'default', 
-    nome_loja: 'Brisa 31 | Moda Masculina', 
-    telefone_whatsapp: '',
-    mensagem_padrao_whatsapp: 'Olá! Tenho interesse neste produto: {nome_produto} - R$ {preco_produto}',
-    monthly_goal: 10000,
-    logo_url: '',
-    card_fee: 3.5,
-    low_stock_alert_enabled: true,
-    low_stock_threshold: 3
-  });
-  const [catalogSearch, setCatalogSearch] = useState('');
-  const [catalogCategoryFilter, setCatalogCategoryFilter] = useState('');
-  const [catalogSizeFilter, setCatalogSizeFilter] = useState('');
-  const [catalogColorFilter, setCatalogColorFilter] = useState('');
-  const [catalogPriceFilter, setCatalogPriceFilter] = useState<number | ''>('');
-  const [notifications, setNotifications] = useState<{ id: number; message: string; type: string }[]>([]);
 
-  const showNotification = (message: string, type: string = 'success') => {
-    const id = Date.now() + Math.random();
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 3000);
-  };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        if (initialProducts && initialProducts.length > 0) {
-          setProducts(initialProducts.filter(p => p.status === 'ativo' || !p.status));
-        } else {
-          // Optimized fetch for catalog - fetch all and filter in JS for safety
-          const q = query(
-            collection(db, 'produtos'), 
-            orderBy('name', 'asc')
-          );
-          const snap = await getDocs(q);
-          const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
-          // Filter only active or undefined status products
-          const activeList = list.filter(p => p.status === 'ativo' || !p.status);
-          setProducts(activeList || []);
-        }
-
-        if (initialSettings && initialSettings.id) {
-          setStoreSettings(initialSettings);
-        } else {
-          const settingsSnap = await getDocs(collection(db, 'configuracoes'));
-          if (!settingsSnap.empty) {
-            setStoreSettings({ id: settingsSnap.docs[0].id, ...settingsSnap.docs[0].data() } as any);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching catalog data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [initialProducts, initialSettings]);
-
-  return (
-    <div className="min-h-[100dvh] bg-gray-50 pb-[calc(5rem+env(safe-area-inset-bottom))]">
-      <header className="bg-midnight border-b border-champagne/20 sticky top-0 z-30 px-4 md:px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-6 flex flex-col gap-4 shadow-xl">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-champagne/30">
-              <img 
-                src={storeSettings?.logo_url && storeSettings.logo_url !== "" 
-                  ? storeSettings.logo_url 
-                  : "/logo.png"} 
-                alt="Logo" 
-                className="w-full h-full object-cover" 
-                referrerPolicy="no-referrer" 
-                onError={(e) => { 
-                  e.currentTarget.src = "/logo.png"; 
-                }} 
-              />
-            </div>
-            <h1 className="text-xl font-serif font-bold text-champagne">Catálogo {storeSettings.nome_loja}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {(user || window.location.pathname.includes('/admin')) && (
-              <button 
-                onClick={() => {
-                  window.history.pushState({}, '', '/');
-                  window.dispatchEvent(new PopStateEvent('popstate'));
-                }}
-                className="text-sm text-champagne/70 font-medium flex items-center gap-1 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors border border-champagne/20"
-              >
-                <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Voltar ao Sistema</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="p-4 md:p-8 w-full max-w-7xl mx-auto mt-8">
-        <div className="mb-10 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Nossa Coleção</h2>
-          <p className="text-gray-500 text-sm md:text-base">Confira nossos produtos exclusivos e peça o seu agora mesmo.</p>
-        </div>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-12 h-12 border-4 border-midnight border-t-transparent rounded-full animate-spin" />
-            <p className="text-gray-500 font-bold animate-pulse">Carregando catálogo...</p>
-          </div>
-        ) : products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-6 bg-white rounded-3xl shadow-sm border border-gray-100">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
-              <Package className="w-10 h-10 text-slate-300" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Nenhum produto encontrado</h3>
-              <p className="text-slate-500 max-w-xs mx-auto">
-                No momento não temos produtos disponíveis no catálogo. Volte em breve para conferir as novidades!
-              </p>
-            </div>
-          </div>
-        ) : (
-          <CatalogContent 
-            products={products}
-            storeSettings={storeSettings}
-            catalogSearch={catalogSearch}
-            setCatalogSearch={setCatalogSearch}
-            catalogCategoryFilter={catalogCategoryFilter}
-            setCatalogCategoryFilter={setCatalogCategoryFilter}
-            catalogSizeFilter={catalogSizeFilter}
-            setCatalogSizeFilter={setCatalogSizeFilter}
-            catalogColorFilter={catalogColorFilter}
-            setCatalogColorFilter={setCatalogColorFilter}
-            catalogPriceFilter={catalogPriceFilter}
-            setCatalogPriceFilter={setCatalogPriceFilter}
-            showNotification={showNotification}
-          />
-        )}
-
-      </main>
-
-      <AnimatePresence mode="wait">
-        {notifications.map(n => (
-          <motion.div key={n.id} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-midnight text-white px-6 py-3 rounded-full shadow-2xl text-xs font-bold">
-            {n.message}
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      <footer className="bg-white border-t border-gray-100 py-10 mt-10">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Package className="w-6 h-6 text-midnight" />
-            <span className="font-bold text-xl text-gray-900">{storeSettings.nome_loja}</span>
-          </div>
-          <p className="text-gray-400 text-sm">© {new Date().getFullYear()} {storeSettings.nome_loja} - Todos os direitos reservados.</p>
-        </div>
-      </footer>
-    </div>
-  );
-};
