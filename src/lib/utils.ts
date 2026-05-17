@@ -15,17 +15,20 @@ export const toNum = (val: any) => {
   if (clean.includes('.') && clean.includes(',')) {
     clean = clean.replace(/\./g, '').replace(',', '.');
   } 
-  // If it has only a comma, it's BR format: 1200,50
+  // If it has only a comma, it's definitely BR decimal separator: 1200,50 or 0,80
   else if (clean.includes(',')) {
     clean = clean.replace(',', '.');
   }
-  // If it has only a dot, it's ambiguous: 1.200 or 1200.50
+  // If it has only dots, we check if it's multiple dots (thousands)
   else if (clean.includes('.')) {
-    const parts = clean.split('.');
-    // If the last part has exactly 3 digits, it's likely a thousands separator: 1.200
-    // Unless it's something like 1.200, but in currency that's rare without a comma
-    if (parts[parts.length - 1].length === 3 && parts.length > 1) {
+    const dotsCount = (clean.match(/\./g) || []).length;
+    if (dotsCount > 1) {
       clean = clean.replace(/\./g, '');
+    } else {
+      // Single dot: We treat it as a decimal point for input compatibility
+      // unless it's clearly a thousands separator in a string like "1.000" 
+      // but in numeric inputs "1.00" is also extremely common.
+      // We'll trust parseFloat to treat it as a decimal point.
     }
   }
   
@@ -61,21 +64,28 @@ export const getValorVenda = (venda: any) => {
   return 0;
 };
 
+const removeAccents = (str: string) => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
 export const isSaleCompleted = (sale: any) => {
   if (!sale) return false;
-  const status = (sale.status || '').toLowerCase();
-  const isCanceled = status.includes('cancel');
+  const rawStatus = (sale.status || '').toLowerCase().trim();
+  const status = removeAccents(rawStatus);
+  
+  // Explicitly check for cancellation first
+  const isCanceled = status.includes('cancel') || status.includes('estorn') || status === 'vazio';
   if (isCanceled) return false;
   
   const completedStatuses = [
-    'concluída', 'concluida', 'concluido', 'concluído', 
-    'finalizada', 'finalizado', 'pago', 'entregue', 'concluido'
+    'concluida', 'concluido', 'finalizada', 'finalizado', 
+    'pago', 'entregue', 'paga', 'recebido', 'ok', 'completed'
   ];
-  
-  const isCompleted = completedStatuses.includes(status);
   
   // If status is empty, we assume it's an older completed sale unless it looks canceled
   if (status === '') return true;
+  
+  const isCompleted = completedStatuses.some(s => status.includes(s)) || completedStatuses.includes(status);
   
   return isCompleted;
 };
@@ -85,3 +95,18 @@ export const formatCurrency = (val: number) =>
 
 export const formatPercent = (val: number) => 
   new Intl.NumberFormat('pt-BR', { style: 'decimal', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(toNum(val)) + '%';
+
+export const getLocalDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const getLocalMonth = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};

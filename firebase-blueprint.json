@@ -158,11 +158,14 @@
         "cor": { "type": "string" },
         "tamanho": { "type": "string" },
         "quantidade": { "type": "integer" },
-        "tipo_movimento": { "type": "string", "enum": ["entrada", "venda", "ajuste", "reposicao"] },
+        "tipo": { "type": "string", "enum": ["entrada", "saída"] },
+        "origem": { "type": "string", "enum": ["compra", "venda", "ajuste manual", "devolução"] },
         "usuario": { "type": "string", "description": "User who performed the movement" },
-        "observations": { "type": "string" }
+        "observacao": { "type": "string" },
+        "variation_id": { "type": "string" },
+        "reference_id": { "type": "string" }
       },
-      "required": ["product_id", "quantidade", "tipo_movimento", "produto"]
+      "required": ["product_id", "quantidade", "tipo", "origem", "produto", "date"]
     },
     "SaleItem": {
       "title": "SaleItem",
@@ -249,15 +252,21 @@
               "tamanho": { "type": "string" },
               "quantity": { "type": "integer" },
               "unit_cost": { "type": "number" },
-              "total_cost": { "type": "number" }
+              "total_cost": { "type": "number" },
+              "proportional_freight": { "type": "number" },
+              "effective_unit_cost": { "type": "number" }
             }
           }
         },
         "total_value": { "type": "number" },
-        "status": { "type": "string", "enum": ["active", "cancelled"] },
+        "freight_total": { "type": "number" },
+        "estimated_delivery": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["pending", "received", "cancelled"] },
+        "received_at": { "type": "string", "format": "date-time" },
+        "received_by": { "type": "string" },
         "created_at": { "type": "string", "format": "date-time" }
       },
-      "required": ["date", "supplier_name", "items", "total_value"]
+      "required": ["date", "supplier_name", "items", "total_value", "status"]
     }
   },
   "firestore": {

@@ -1,17 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Wallet, AlertCircle, AlertTriangle, Zap, CheckCircle2, Info, ArrowUpRight, ArrowDownRight, PieChart as PieChartIcon, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, AlertCircle, AlertTriangle, Zap, CheckCircle2, Info, ArrowUpRight, ArrowDownRight, PieChart as PieChartIcon, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
-import { Product, Customer, Sale, Expense, Ad, Seller, DashboardData } from '../../types';
+import { Product, Customer, Sale, Expense, Ad, Seller, DashboardData, Purchase } from '../../types';
 
 import { calcularFinanceiro, getSaleFinancials } from '../../lib/finance';
+import { getLocalDate, getLocalMonth, toNum, isSaleCompleted } from '../../lib/utils';
+import { onSnapshot, query, where } from 'firebase/firestore';
+import { 
+  vendasRef, 
+  gastosRef, 
+  comprasRef,
+  handleFirestoreError,
+  OperationType 
+} from '../../firebase';
 
 interface CashControlProps {
-  sales: Sale[];
+  sales: Sale[]; // Keep props for optional legacy support or fallback
   expenses: Expense[];
   products: Product[];
+  purchases: Purchase[];
   storeSettings: any;
   formatCurrency: (val: number) => string;
   toNum: (val: any) => number;
@@ -27,6 +37,7 @@ export const CashControl = ({
   sales = [], 
   expenses = [], 
   products = [],
+  purchases = [],
   storeSettings = {},
   formatCurrency, 
   toNum,
@@ -38,10 +49,88 @@ export const CashControl = ({
   loadMoreExpenses
 }: CashControlProps) => {
   const [filterType, setFilterType] = useState<'day' | 'week' | 'month'>('month');
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 10));
-  const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [filterDate, setFilterDate] = useState(getLocalDate());
+  const [filterMonth, setFilterMonth] = useState(getLocalMonth());
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Independent local state for filtered data fetching (Structural Fix)
+  const [periodSales, setPeriodSales] = useState<Sale[]>([]);
+  const [periodExpenses, setPeriodExpenses] = useState<Expense[]>([]);
+  const [periodPurchases, setPeriodPurchases] = useState<Purchase[]>([]);
+  const [prevMonthSales, setPrevMonthSales] = useState<Sale[]>([]);
+  const [prevMonthExpenses, setPrevMonthExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let start = '';
+    let end = '';
+
+    if (filterType === 'month') {
+      start = `${filterMonth}-01`;
+      end = `${filterMonth}-31`;
+    } else if (filterType === 'day') {
+      start = filterDate;
+      end = filterDate;
+    } else if (filterType === 'week') {
+      const date = new Date(filterDate);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      const dStart = new Date(date.setDate(diff));
+      start = dStart.toISOString().split('T')[0];
+      const dEnd = new Date(date.setDate(diff + 6));
+      end = dEnd.toISOString().split('T')[0];
+    }
+
+    if (!start || !end) return;
+
+    setLoading(true);
+    let unsubs: (() => void)[] = [];
+
+    try {
+      // 1. Fetch Sales for current period
+      const qSales = query(vendasRef, where('date', '>=', start), where('date', '<=', end));
+      unsubs.push(onSnapshot(qSales, (snap) => {
+        setPeriodSales(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
+        setLoading(false);
+      }, err => handleFirestoreError(err, OperationType.LIST, 'vendas_financeiro')));
+
+      // 2. Fetch Expenses for current period
+      const qExpenses = query(gastosRef, where('date', '>=', start), where('date', '<=', end));
+      unsubs.push(onSnapshot(qExpenses, (snap) => {
+        setPeriodExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)));
+      }, err => handleFirestoreError(err, OperationType.LIST, 'gastos_financeiro')));
+
+      // 3. Fetch Purchases for current period
+      const qPurchases = query(comprasRef, where('date', '>=', start), where('date', '<=', end));
+      unsubs.push(onSnapshot(qPurchases, (snap) => {
+        setPeriodPurchases(snap.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
+      }, err => handleFirestoreError(err, OperationType.LIST, 'compras_financeiro')));
+
+      // 4. Fetch Previous Month for comparison (if month filter)
+      if (filterType === 'month') {
+        const prevMonth = getPreviousMonth(filterMonth);
+        const pStart = `${prevMonth}-01`;
+        const pEnd = `${prevMonth}-31`;
+        
+        const qPrevSales = query(vendasRef, where('date', '>=', pStart), where('date', '<=', pEnd));
+        unsubs.push(onSnapshot(qPrevSales, (snap) => {
+          setPrevMonthSales(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
+        }));
+
+        const qPrevExpenses = query(gastosRef, where('date', '>=', pStart), where('date', '<=', pEnd));
+        unsubs.push(onSnapshot(qPrevExpenses, (snap) => {
+          setPrevMonthExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)));
+        }));
+      }
+
+    } catch (error) {
+      console.error("Error fetching finance data:", error);
+      setLoading(false);
+    }
+
+    return () => unsubs.forEach(fn => fn());
+  }, [filterType, filterDate, filterMonth]);
 
   const handleNewLaunch = () => {
     setEditingItem(null);
@@ -59,51 +148,56 @@ export const CashControl = ({
   const dashboard = useMemo(() => {
     let data;
     if (filterType === 'month') {
-      data = calcularFinanceiro(sales, expenses, products, storeSettings, filterMonth);
+      data = calcularFinanceiro(periodSales, periodExpenses, products, storeSettings, filterMonth);
     } else if (filterType === 'day') {
-      data = calcularFinanceiro(sales, expenses, products, storeSettings, undefined, filterDate, filterDate);
+      data = calcularFinanceiro(periodSales, periodExpenses, products, storeSettings, undefined, filterDate, filterDate);
     } else if (filterType === 'week') {
       const date = new Date(filterDate);
       const day = date.getDay();
       const diff = date.getDate() - day + (day === 0 ? -6 : 1);
       const start = new Date(date.setDate(diff)).toISOString().split('T')[0];
       const end = new Date(date.setDate(diff + 6)).toISOString().split('T')[0];
-      data = calcularFinanceiro(sales, expenses, products, storeSettings, undefined, start, end);
+      data = calcularFinanceiro(periodSales, periodExpenses, products, storeSettings, undefined, start, end);
     }
 
     if (!data) return null;
 
+    // Filter purchases for the selected period
+    const filteredPurchases = periodPurchases.filter(p => !p.status || p.status !== 'cancelled');
+    const totalInvestmentInPeriod = filteredPurchases.reduce((acc, p) => acc + toNum(p.total_value), 0);
+
     // Map to the structure expected by CashControl
     const manualInflowsValue = data.filteredExpenses.filter(e => e.flow_type === 'entrada');
+    const salesFinancials = data.filteredSales.map(s => getSaleFinancials(s, products));
     
     return {
       cashFlow: {
         inflow: { 
-          pix: data.filteredSales.filter(s => s.payment_method === 'pix').reduce((acc, s) => acc + getSaleFinancials(s).valor_bruto, 0) + 
+          pix: salesFinancials.reduce((acc, f) => acc + f.paymentBreakdown.pix, 0) + 
                manualInflowsValue.filter(e => (e.payment_method || '').toLowerCase() === 'pix').reduce((acc, e) => acc + toNum(e.value), 0),
-          card: data.filteredSales.filter(s => ['credito', 'debito', 'cartao_vista', 'cartao_parcelado'].includes(s.payment_method)).reduce((acc, s) => acc + getSaleFinancials(s).valor_bruto, 0) +
+          card: salesFinancials.reduce((acc, f) => acc + f.paymentBreakdown.card, 0) +
                 manualInflowsValue.filter(e => ['credito', 'debito', 'cartao_vista', 'cartao_parcelado'].includes((e.payment_method || '').toLowerCase())).reduce((acc, e) => acc + toNum(e.value), 0),
-          cash: data.filteredSales.filter(s => s.payment_method === 'dinheiro').reduce((acc, s) => acc + getSaleFinancials(s).valor_bruto, 0) +
+          cash: salesFinancials.reduce((acc, f) => acc + f.paymentBreakdown.cash, 0) +
                 manualInflowsValue.filter(e => (e.payment_method || '').toLowerCase() === 'dinheiro').reduce((acc, e) => acc + toNum(e.value), 0),
           total: data.vendas
         },
         outflow: {
-          purchases: data.custo,
+          purchases: totalInvestmentInPeriod,
           operational: data.despesasLoja,
           ads: data.anuncios,
-          fees: data.totalTaxas - data.anuncios - data.despesasLoja, // Simplified
-          others: 0,
-          total: data.totalDespesas + data.custo
+          fees: data.totalTaxasCartao,
+          others: data.outrasDespesas,
+          total: data.totalDespesas + totalInvestmentInPeriod
         },
-        balance: data.vendas - (data.totalDespesas + data.custo)
+        balance: data.vendas - (data.totalDespesas + totalInvestmentInPeriod)
       }
     };
-  }, [filterType, filterDate, filterMonth, products, sales, expenses, storeSettings, toNum]);
+  }, [filterType, filterDate, filterMonth, products, periodSales, periodExpenses, periodPurchases, storeSettings, toNum]);
 
   const prevMonthData = useMemo(() => {
     if (filterType !== 'month') return null;
     const prevMonth = getPreviousMonth(filterMonth);
-    const data = calcularFinanceiro(sales, expenses, products, storeSettings, prevMonth);
+    const data = calcularFinanceiro(prevMonthSales, prevMonthExpenses, products, storeSettings, prevMonth);
     
     return {
       cashFlow: {
@@ -112,7 +206,7 @@ export const CashControl = ({
         balance: data.vendas - (data.totalDespesas + data.custo)
       }
     };
-  }, [filterType, filterMonth, products, sales, expenses, storeSettings]);
+  }, [filterType, filterMonth, products, prevMonthSales, prevMonthExpenses, storeSettings]);
 
   const cash = dashboard?.cashFlow || {
     inflow: { pix: 0, card: 0, cash: 0, total: 0 },
@@ -184,19 +278,59 @@ export const CashControl = ({
       };
       const searchKey = methodMap[category] || category.toLowerCase();
       
-      items = sales.filter((s: any) => {
-        const matchesMonth = filterType === 'month' ? s.date.startsWith(filterMonth) : true;
-        const matchesMethod = (s.payment_method || '').toLowerCase().includes(searchKey);
-        return matchesMonth && matchesMethod && s.status !== 'cancelado' && s.status !== 'cancelada';
-      }).map(s => {
-        const financials = getSaleFinancials(s);
-        return {
-          id: s.id,
-          date: s.date,
-          description: `Venda #${s.id.slice(-4)} - ${s.customer_name || 'Cliente'}`,
-          value: financials.valor_bruto
-        };
+      const salePaymentsMatched: any[] = [];
+      periodSales.forEach((s: any) => {
+        if (!isSaleCompleted(s)) return;
+        
+        if (s.payments && s.payments.length > 0) {
+          s.payments.forEach((p: any) => {
+            const method = (p.method || '').toLowerCase();
+            const isCardMatch = searchKey === 'cart' && ['debito', 'credito', 'cartao_vista', 'cartao_parcelado'].includes(method);
+            const isDirectMatch = method.includes(searchKey);
+            
+            if (isDirectMatch || isCardMatch) {
+              salePaymentsMatched.push({
+                id: `${s.id}-${Math.random()}`,
+                date: s.date,
+                description: `Venda #${s.id.slice(-4)} (${p.method.toUpperCase()}) - ${s.customer_name || 'Cliente'}`,
+                value: toNum(p.amount)
+              });
+            }
+          });
+        } else {
+          // Fallback legacy
+          const method = (s.payment_method || '').toLowerCase();
+          const isCardMatch = searchKey === 'cart' && ['debito', 'credito', 'cartao_vista', 'cartao_parcelado'].includes(method);
+          const isDirectMatch = method.includes(searchKey);
+          
+          if (isDirectMatch || isCardMatch) {
+            const fin = getSaleFinancials(s);
+            salePaymentsMatched.push({
+               id: s.id,
+               date: s.date,
+               description: `Venda #${s.id.slice(-4)} - ${s.customer_name || 'Cliente'}`,
+               value: fin.valor_bruto
+            });
+          }
+        }
       });
+
+      items = salePaymentsMatched;
+
+      // Add manual inflows too
+      const manualItems = periodExpenses.filter((e: any) => {
+        const method = (e.payment_method || '').toLowerCase();
+        const isCardMatch = searchKey === 'cart' && ['debito', 'credito', 'cartao_vista', 'cartao_parcelado'].includes(method);
+        const isDirectMatch = method.includes(searchKey);
+        return e.flow_type === 'entrada' && (isDirectMatch || isCardMatch);
+      }).map(e => ({
+        id: e.id,
+        date: e.date,
+        description: e.description,
+        value: toNum(e.value)
+      }));
+
+      items = [...items, ...manualItems];
     } else {
       title = `Saídas: ${category}`;
       const typeMap: Record<string, string> = {
@@ -208,16 +342,35 @@ export const CashControl = ({
       };
       const searchType = typeMap[category] || category.toLowerCase();
 
-      items = expenses.filter((e: any) => {
-        const matchesMonth = filterType === 'month' ? e.date.startsWith(filterMonth) : true;
-        const matchesType = (e.type || '').toLowerCase().includes(searchType);
-        return matchesMonth && matchesType;
-      }).map(e => ({
-        id: e.id,
-        date: e.date,
-        description: e.description,
-        value: toNum(e.value)
-      }));
+      if (category === 'Estoque') {
+        items = periodPurchases.filter(p => !p.status || p.status !== 'cancelled').map(p => ({
+          id: p.id,
+          date: p.date,
+          description: `Compra: ${p.supplier_name}`,
+          value: toNum(p.total_value)
+        }));
+      } else if (category === 'Taxas') {
+        // Taxes are calculated from sales, but we'll show them as a summary or individual sale taxes
+        items = periodSales.filter(s => isSaleCompleted(s)).map(s => {
+          const fin = getSaleFinancials(s);
+          return {
+            id: `tax-${s.id}`,
+            date: s.date,
+            description: `Taxa Cartão: Venda #${s.id.slice(-4)}`,
+            value: fin.tax_value
+          };
+        }).filter(i => i.value > 0);
+      } else {
+        items = periodExpenses.filter((e: any) => {
+          const matchesType = (e.type || '').toLowerCase().includes(searchType) || (e.category || '').toLowerCase().includes(searchType);
+          return matchesType && e.flow_type !== 'entrada';
+        }).map(e => ({
+          id: e.id,
+          date: e.date,
+          description: e.description,
+          value: toNum(e.value)
+        }));
+      }
     }
 
     setSelectedCategory({ title, items });
@@ -226,9 +379,17 @@ export const CashControl = ({
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {loading && (
+        <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-[110] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sincronizando dados...</p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row gap-3 sm:gap-6">
         <div className="lg:w-2/3">
-          <Card className="p-3 sm:p-5 md:p-6 rounded-xl bg-white shadow-sm border border-slate-100 h-full">
+          <Card className="p-3 sm:p-5 md:p-6 rounded-xl bg-white shadow-lg border border-slate-200 h-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm shrink-0">
@@ -236,7 +397,7 @@ export const CashControl = ({
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Financeiro</h3>
-                  <p className="text-[10px] font-medium text-slate-500 mt-0.5">Gestão de entradas e saídas</p>
+                  <p className="text-[10px] font-bold text-slate-600 mt-0.5 uppercase tracking-wider">Gestão de entradas e saídas</p>
                 </div>
               </div>
               
@@ -249,33 +410,33 @@ export const CashControl = ({
             </div>
 
             <div className="mt-6 flex flex-col md:flex-row gap-4 items-center justify-between border-t border-slate-50 pt-6">
-              <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100 w-full md:w-auto">
+              <div className="flex bg-white p-1 rounded-xl border border-slate-300 w-full md:w-auto shadow-md">
                 {['day', 'week', 'month'].map((t) => (
                   <button 
                     key={t}
                     onClick={() => setFilterType(t as any)}
-                    className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${filterType === t ? 'bg-white text-slate-900 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-800'}`}
+                    className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${filterType === t ? 'bg-white text-slate-950 shadow-md border border-slate-300' : 'text-slate-600 hover:text-slate-950'}`}
                   >
                     {t === 'day' ? 'Dia' : t === 'week' ? 'Semana' : 'Mês'}
                   </button>
                 ))}
               </div>
 
-              <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 w-full md:w-auto">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Período:</label>
+              <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-300 w-full md:w-auto shadow-md">
+                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Período:</label>
                 {filterType === 'month' ? (
                   <input 
                     type="month" 
                     value={filterMonth || ''}
                     onChange={(e) => setFilterMonth(e.target.value)}
-                    className="bg-transparent border-none outline-none text-xs font-semibold text-slate-900 focus:ring-0 p-0 cursor-pointer"
+                    className="bg-transparent border-none outline-none text-xs font-black text-slate-950 focus:ring-0 p-0 cursor-pointer"
                   />
                 ) : (
                   <input 
                     type="date" 
                     value={filterDate || ''}
                     onChange={(e) => setFilterDate(e.target.value)}
-                    className="bg-transparent border-none outline-none text-xs font-semibold text-slate-900 focus:ring-0 p-0 cursor-pointer"
+                    className="bg-transparent border-none outline-none text-xs font-black text-slate-950 focus:ring-0 p-0 cursor-pointer"
                   />
                 )}
               </div>
@@ -289,10 +450,10 @@ export const CashControl = ({
               key={`${alert.title}-${idx}`}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`p-4 rounded-xl border flex items-start gap-4 mb-3 last:mb-0 shadow-sm ${
-                alert.type === 'danger' ? 'bg-rose-50/50 border-rose-100 text-rose-700' :
-                alert.type === 'warning' ? 'bg-amber-50/50 border-amber-100 text-amber-700' :
-                'bg-blue-50/50 border-blue-100 text-blue-700'
+              className={`p-4 rounded-xl border-2 flex items-start gap-4 mb-3 last:mb-0 shadow-md ${
+                alert.type === 'danger' ? 'bg-rose-50 border-rose-200 text-rose-800' :
+                alert.type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                'bg-blue-50 border-blue-200 text-blue-800'
               }`}
             >
               <div className={`p-1.5 rounded-lg bg-white shadow-sm shrink-0 ${
@@ -311,7 +472,7 @@ export const CashControl = ({
             </motion.div>
           ))}
           {alerts.length === 0 && (
-            <div className="p-5 rounded-xl bg-emerald-50/50 border border-emerald-100 flex items-center gap-4 shadow-sm h-full">
+            <Card className="p-5 rounded-xl bg-emerald-50/50 border border-emerald-200 flex items-center gap-4 shadow-md h-full">
               <div className="p-2 bg-white rounded-xl shadow-sm text-emerald-600 shrink-0">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
@@ -319,13 +480,13 @@ export const CashControl = ({
                 <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5 text-emerald-700">Fluxo Saudável</p>
                 <p className="text-[11px] font-medium text-emerald-600 leading-tight">Nenhuma anomalia detectada no seu fluxo de caixa.</p>
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-8">
-        <Card className="p-4 sm:p-6 md:p-8 rounded-xl bg-white shadow-sm border border-slate-100">
+        <Card className="p-4 sm:p-6 md:p-8 rounded-xl bg-white shadow-lg border border-slate-200">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 gap-3 sm:gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0 border border-emerald-100">
@@ -367,8 +528,8 @@ export const CashControl = ({
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <PieChartIcon className="w-6 h-6 text-slate-300 mb-1" />
-                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Entradas</span>
+                <PieChartIcon className="w-6 h-6 text-slate-400 mb-1" />
+                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Entradas</span>
               </div>
             </div>
 
@@ -377,7 +538,8 @@ export const CashControl = ({
                 <div 
                   key={item.name} 
                   onClick={() => openCategoryDetails(item.name, 'inflow')}
-                  className="flex items-center justify-between p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all cursor-pointer group"
+                  className="flex items-center justify-between p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md hover:bg-slate-50 transition-all cursor-pointer group"
+                  id={`inflow-item-${item.name}`}
                 >
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
@@ -385,7 +547,7 @@ export const CashControl = ({
                   </div>
                   <div className="text-right">
                     <p className="text-xs sm:text-sm font-black text-slate-950">{formatCurrency(item.value)}</p>
-                    <p className="text-[8px] sm:text-[9px] font-bold text-slate-600">{cash.inflow.total > 0 ? ((item.value / cash.inflow.total) * 100).toFixed(1) : 0}%</p>
+                    <p className="text-[8px] sm:text-[9px] font-black text-slate-800">{cash.inflow.total > 0 ? ((item.value / cash.inflow.total) * 100).toFixed(1) : 0}%</p>
                   </div>
                 </div>
               ))}
@@ -393,7 +555,7 @@ export const CashControl = ({
           </div>
         </Card>
 
-        <Card className="p-4 sm:p-6 md:p-8 rounded-xl bg-white shadow-sm border border-slate-100">
+        <Card className="p-4 sm:p-6 md:p-8 rounded-xl bg-white shadow-lg border border-slate-200">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 gap-3 sm:gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-50 rounded-xl flex items-center justify-center shrink-0 border border-rose-100">
@@ -435,8 +597,8 @@ export const CashControl = ({
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <PieChartIcon className="w-6 h-6 text-slate-300 mb-1" />
-                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Saídas</span>
+                <PieChartIcon className="w-6 h-6 text-slate-400 mb-1" />
+                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Saídas</span>
               </div>
             </div>
 
@@ -445,7 +607,8 @@ export const CashControl = ({
                 <div 
                   key={item.name} 
                   onClick={() => openCategoryDetails(item.name, 'outflow')}
-                  className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all cursor-pointer group"
+                  className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md hover:bg-slate-50 transition-all cursor-pointer group"
+                  id={`outflow-item-${item.name}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />

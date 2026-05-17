@@ -19,7 +19,7 @@ import {
 import { Card } from '../../components/ui/Card';
 import { StatCard } from '../../components/ui/StatCard';
 import { Sale, Product } from '../../types';
-import { getValorVenda } from '../../lib/utils';
+import { getValorVenda, getLocalDate, isSaleCompleted, formatCurrency } from '../../lib/utils';
 
 import { calcularFinanceiro, getSaleFinancials } from '../../lib/finance';
 
@@ -30,6 +30,10 @@ interface SalesListProps {
   setSalesSearchTerm: (term: string) => void;
   salesDateFilter: string;
   setSalesDateFilter: (date: string) => void;
+  salesStartDate: string;
+  setSalesStartDate: (date: string) => void;
+  salesEndDate: string;
+  setSalesEndDate: (date: string) => void;
   globalMonthFilter: string;
   setGlobalMonthFilter: (month: string) => void;
   salesPaymentFilter: string;
@@ -40,6 +44,7 @@ interface SalesListProps {
   setSalesStatusFilter: (status: string) => void;
   handleEdit: (tab: string, item: any) => void;
   handleDeleteSale: (id: string) => void;
+  handleCancelSale: (id: string) => void;
   handleCancelItem: (saleId: string, itemIndex: number) => void;
   onNewSale: () => void;
   user: any;
@@ -56,6 +61,10 @@ export const SalesList = ({
   setSalesSearchTerm, 
   salesDateFilter, 
   setSalesDateFilter, 
+  salesStartDate,
+  setSalesStartDate,
+  salesEndDate,
+  setSalesEndDate,
   globalMonthFilter, 
   setGlobalMonthFilter, 
   salesPaymentFilter, 
@@ -66,6 +75,7 @@ export const SalesList = ({
   setSalesStatusFilter,
   handleEdit, 
   handleDeleteSale, 
+  handleCancelSale,
   handleCancelItem,
   onNewSale,
   user, 
@@ -74,6 +84,53 @@ export const SalesList = ({
   storeSettings,
   loadMore
 }: SalesListProps) => {
+  const [datePreset, setDatePreset] = React.useState('custom');
+
+  const handlePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const today = new Date();
+    // No setHours(0,0,0,0) here to keep it simple, but let's use the helper
+    const dateStr = getLocalDate();
+
+    if (preset === 'hoje') {
+      setSalesStartDate(dateStr);
+      setSalesEndDate(dateStr);
+    } else if (preset === 'semana') {
+      const d = new Date();
+      const first = d.getDate() - d.getDay();
+      const firstDay = new Date(d.setDate(first));
+      const lastDay = new Date(d.setDate(first + 6));
+      
+      const fYear = firstDay.getFullYear();
+      const fMonth = String(firstDay.getMonth() + 1).padStart(2, '0');
+      const fDay = String(firstDay.getDate()).padStart(2, '0');
+      
+      const lYear = lastDay.getFullYear();
+      const lMonth = String(lastDay.getMonth() + 1).padStart(2, '0');
+      const lDay = String(lastDay.getDate()).padStart(2, '0');
+
+      setSalesStartDate(`${fYear}-${fMonth}-${fDay}`);
+      setSalesEndDate(`${lYear}-${lMonth}-${lDay}`);
+    } else if (preset === 'mes') {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const lastDay = new Date(year, d.getMonth() + 1, 0).getDate();
+      
+      setSalesStartDate(`${year}-${month}-01`);
+      setSalesEndDate(`${year}-${month}-${String(lastDay).padStart(2, '0')}`);
+    } else if (preset === 'todos') {
+      setSalesStartDate('');
+      setSalesEndDate('');
+    }
+    
+    // Clear the individual date/month filters if using range
+    if (preset !== 'custom') {
+      setSalesDateFilter('');
+      setGlobalMonthFilter('');
+    }
+  };
+
   const formatPaymentMethod = (method: string) => {
     const methods: Record<string, string> = {
       'pix': 'PIX',
@@ -92,16 +149,25 @@ export const SalesList = ({
                         (s.seller_name || '').toLowerCase().includes(term) ||
                         (s.payment_method || '').toLowerCase().includes(term);
     const matchesDate = !salesDateFilter || (s.date && s.date.includes(salesDateFilter));
+    const matchesRange = (!salesStartDate || (s.date && s.date >= salesStartDate)) && 
+                        (!salesEndDate || (s.date && s.date <= salesEndDate + 'T23:59:59'));
     const matchesMonth = !globalMonthFilter || (s.date && s.date.startsWith(globalMonthFilter));
     const matchesPayment = !salesPaymentFilter || s.payment_method === salesPaymentFilter;
     const matchesSeller = !salesSellerFilter || s.seller_name === salesSellerFilter;
-    const matchesStatus = !salesStatusFilter || s.status === salesStatusFilter;
-    return matchesSearch && matchesDate && matchesMonth && matchesPayment && matchesSeller && matchesStatus;
+    
+    let matchesStatus = true;
+    if (salesStatusFilter === 'concluida') {
+      matchesStatus = isSaleCompleted(s);
+    } else if (salesStatusFilter === 'cancelada') {
+      matchesStatus = !isSaleCompleted(s);
+    }
+
+    return matchesSearch && matchesDate && matchesRange && matchesMonth && matchesPayment && matchesSeller && matchesStatus;
   }).sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
 
   // Calculate summary based on filtered sales
   const summary = filteredSales.reduce((acc, s) => {
-    if (s.status === 'cancelada') return acc;
+    if (!isSaleCompleted(s)) return acc;
     const financials = getSaleFinancials(s);
 
     return {
@@ -178,135 +244,168 @@ export const SalesList = ({
               onChange={(e) => setSalesSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="relative group">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="date" 
-                className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer"
-                value={salesDateFilter || ''}
-                onChange={(e) => {
-                  setSalesDateFilter(e.target.value);
-                  if (e.target.value) setGlobalMonthFilter('');
-                }}
-              />
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-50">
+            <select 
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[120px]"
+              value={datePreset}
+              onChange={(e) => handlePresetChange(e.target.value)}
+            >
+              <option value="custom">Data Customizada</option>
+              <option value="hoje">Hoje</option>
+              <option value="semana">Esta Semana</option>
+              <option value="mes">Este Mês</option>
+              <option value="todos">Tudo</option>
+            </select>
+
+            {datePreset === 'custom' && (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:border-slate-900 outline-none"
+                  value={salesStartDate}
+                  onChange={(e) => setSalesStartDate(e.target.value)}
+                />
+                <span className="text-[10px] font-bold text-slate-400">até</span>
+                <input 
+                  type="date" 
+                  className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:border-slate-900 outline-none"
+                  value={salesEndDate}
+                  onChange={(e) => setSalesEndDate(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="flex-1" />
+            
+            <div className="flex items-center gap-2">
+              <select 
+                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[120px]"
+                value={salesPaymentFilter || ''}
+                onChange={(e) => setSalesPaymentFilter(e.target.value)}
+              >
+                <option value="">Forma de Pgto</option>
+                <option value="pix">PIX</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="debito">Débito</option>
+                <option value="credito">Crédito</option>
+              </select>
+              <select 
+                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[120px]"
+                value={salesStatusFilter || ''}
+                onChange={(e) => setSalesStatusFilter(e.target.value)}
+              >
+                <option value="">Status</option>
+                <option value="concluida">Concluída</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
             </div>
-            <select 
-              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[120px]"
-              value={salesPaymentFilter || ''}
-              onChange={(e) => setSalesPaymentFilter(e.target.value)}
-            >
-              <option value="">Forma</option>
-              <option value="pix">PIX</option>
-              <option value="dinheiro">Dinheiro</option>
-              <option value="debito">Débito</option>
-              <option value="credito">Crédito</option>
-            </select>
-            <select 
-              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all cursor-pointer appearance-none min-w-[120px]"
-              value={salesStatusFilter || ''}
-              onChange={(e) => setSalesStatusFilter(e.target.value)}
-            >
-              <option value="">Status</option>
-              <option value="concluida">Concluída</option>
-              <option value="cancelada">Cancelada</option>
-            </select>
           </div>
         </div>
       </Card>
 
       <Card className="overflow-hidden border border-slate-100 rounded-xl bg-white shadow-sm">
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="hidden md:block overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Data</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Cliente</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Vendedor</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Total</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Forma</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none text-center">Status</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none text-right">Ações</th>
+              <tr className="bg-slate-50/70 border-b border-slate-100/60">
+                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Data</th>
+                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Cliente / Itens</th>
+                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Vendedor</th>
+                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Financeiro</th>
+                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Forma</th>
+                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none text-center">Status</th>
+                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none text-right">Controles</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100/50">
               {filteredSales.map(s => {
                 const financials = getSaleFinancials(s);
                 return (
-                 <tr key={s.id} className={`hover:bg-slate-50/50 transition-all group ${s.status === 'cancelada' ? 'opacity-80 grayscale' : ''}`}>
-                    <td className="px-6 py-4">
+                  <tr key={s.id} className={`hover:bg-slate-50/30 transition-all group ${!isSaleCompleted(s) ? 'opacity-70 grayscale' : ''}`}>
+                    <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-slate-900 leading-none mb-1">
+                        <span className="text-xs font-black text-slate-900 leading-none mb-1.5 uppercase">
                           {new Date(s.date).toLocaleDateString('pt-BR')}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-medium lowercase tracking-wider">
+                        <span className="text-[10px] text-slate-400 font-bold lowercase tracking-wider">
                           {new Date(s.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className={`text-sm font-semibold tracking-tight leading-tight ${s.status === 'cancelada' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col min-w-[200px]">
+                        <span className={`text-sm font-black tracking-tight leading-tight uppercase ${!isSaleCompleted(s) ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                           {s.customer_name || 'Consumidor Final'}
                         </span>
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {s.items?.slice(0, 2).map((it: any, idx: number) => (
-                            <span key={idx} className="px-1.5 py-0.5 bg-slate-100 rounded text-[9px] font-medium text-slate-600 border border-slate-200">
-                              {it.product_name}
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {s.items?.slice(0, 3).map((it: any, idx: number) => (
+                            <span key={idx} className="px-2 py-0.5 bg-slate-50 rounded-lg text-[9px] font-black text-slate-500 border border-slate-200/60 uppercase">
+                              {it.quantity}x {it.product_name}
                             </span>
                           ))}
-                          {s.items && s.items.length > 2 && (
-                            <span className="text-[9px] font-bold text-slate-400">+{s.items.length - 2}</span>
+                          {s.items && s.items.length > 3 && (
+                            <span className="text-[10px] font-black text-slate-400 ml-1">+{s.items.length - 3}</span>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-0.5 bg-slate-50 rounded-lg text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <span className="px-3 py-1 bg-slate-100/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-slate-200/50">
                         {s.seller_name || '-'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className={`text-sm font-bold tracking-tight ${s.status === 'cancelada' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <div className="flex flex-col items-start">
+                        <span className={`text-sm font-black tracking-tight ${!isSaleCompleted(s) ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                           {formatCurrency(financials.valor_bruto)}
                         </span>
-                        <span className="text-[10px] text-emerald-600 font-bold">
-                          lucro: {formatCurrency(financials.profit)}
+                        <span className="text-[10px] text-emerald-600 font-black uppercase tracking-tighter mt-0.5">
+                          LUCRATIV.: {formatCurrency(financials.profit)}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-700">
+                    <td className="px-6 py-5 whitespace-nowrap">
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-800 bg-slate-100/30 px-2 py-1 rounded-lg">
                         {formatPaymentMethod(s.payment_method)}
-                        {s.payment_method === 'credito' && s.installments > 1 && ` ${s.installments}x`}
+                        {s.payment_method === 'credito' && s.installments > 1 && ` [${s.installments}X]`}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest border ${
-                        s.status === 'cancelada' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                    <td className="px-6 py-5 text-center whitespace-nowrap">
+                      <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border transition-all ${
+                        !isSaleCompleted(s) 
+                          ? 'bg-rose-50 text-rose-700 border-rose-100' 
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm shadow-emerald-500/5'
                       }`}>
-                        {s.status === 'cancelada' ? 'Cancelada' : 'Concluída'}
+                        {!isSaleCompleted(s) ? 'CANCELADA' : 'CONCLUÍDA'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        {s.status !== 'cancelada' && (
-                          <button 
-                            onClick={() => handleEdit('vendas', s)}
-                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
-                            title="Editar"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                    <td className="px-6 py-5 text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-1.5">
+                        {isSaleCompleted(s) && (
+                          <>
+                            <button 
+                              onClick={() => handleCancelSale(s.id)}
+                              className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-transparent hover:border-rose-100 shadow-sm hover:shadow-rose-500/5 group/btn"
+                              title="Cancelar Venda"
+                            >
+                              <X className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                            </button>
+                            <button 
+                              onClick={() => handleEdit('vendas', s)}
+                              className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all border border-transparent hover:border-slate-200 shadow-sm hover:shadow-slate-900/5 group/btn"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                            </button>
+                          </>
                         )}
                         {user?.role === 'admin' && (
                           <button 
                             onClick={() => handleDeleteSale(s.id)}
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-transparent hover:border-rose-100 shadow-sm hover:shadow-rose-500/5 group/btn"
                             title="Excluir"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
                           </button>
                         )}
                       </div>
@@ -330,7 +429,7 @@ export const SalesList = ({
         {filteredSales.map(s => {
           const financials = getSaleFinancials(s);
           return (
-            <div key={s.id} className={`bg-white rounded-xl p-3 shadow-sm border border-slate-100 space-y-3 transition-all active:scale-[0.98] ${s.status === 'cancelada' ? 'opacity-80 grayscale' : ''}`}>
+            <div key={s.id} className={`bg-white rounded-xl p-3 shadow-sm border border-slate-100 space-y-3 transition-all active:scale-[0.98] ${!isSaleCompleted(s) ? 'opacity-80 grayscale' : ''}`}>
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
@@ -339,9 +438,9 @@ export const SalesList = ({
                   <h4 className="text-sm font-bold text-slate-900 tracking-tight leading-tight">{s.customer_name || 'Consumidor Final'}</h4>
                 </div>
                 <span className={`px-1.5 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest border ${
-                  s.status === 'cancelada' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                  !isSaleCompleted(s) ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
                 }`}>
-                  {s.status === 'cancelada' ? 'Cancelada' : 'OK'}
+                  {!isSaleCompleted(s) ? 'Cancelada' : 'OK'}
                 </span>
               </div>
               
@@ -361,13 +460,22 @@ export const SalesList = ({
                   </p>
                 </div>
                 <div className="flex gap-1.5">
-                  {s.status !== 'cancelada' && (
-                    <button 
-                      onClick={() => handleEdit('vendas', s)}
-                      className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-slate-900 rounded-lg border border-slate-200 active:scale-95 transition-all"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
+                  {isSaleCompleted(s) && (
+                    <>
+                      <button 
+                        onClick={() => handleCancelSale(s.id)}
+                        className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-400 hover:text-rose-600 rounded-lg border border-rose-100 active:scale-95 transition-all"
+                        title="Cancelar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleEdit('vendas', s)}
+                        className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-slate-900 rounded-lg border border-slate-200 active:scale-95 transition-all"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                   {user?.role === 'admin' && (
                     <button 

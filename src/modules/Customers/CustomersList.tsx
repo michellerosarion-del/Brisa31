@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, Phone, Instagram } from 'lucide-react';
+import { Edit, Trash2, Phone, Instagram, Users, Plus } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Customer, StoreSettings } from '../../types';
 
@@ -30,6 +30,28 @@ export const CustomersList = ({
 }: CustomersListProps) => {
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center bg-slate-900 p-3 sm:p-4 rounded-xl shadow-lg border border-slate-800 mb-6">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/10 rounded-lg flex items-center justify-center shadow-inner">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-[11px] sm:text-sm font-bold text-white uppercase tracking-widest leading-none">Clientes</h2>
+            <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5 sm:mt-1">Base de Clientes</p>
+          </div>
+        </div>
+
+        {user?.role === 'admin' && (
+          <button 
+            onClick={() => handleEdit('clientes', null)}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 shadow-lg"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Cliente
+          </button>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {customers.map((c: any) => (
           <Card key={c.id} className="relative group hover:shadow-md transition-all duration-300 border-slate-100 rounded-xl overflow-hidden bg-white">

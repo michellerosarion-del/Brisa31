@@ -45,18 +45,29 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
   const filteredMovements = useMemo(() => {
     return stockMovements.filter(m => {
       const matchesSearch = (m.produto || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (m.tipo_movimento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.origem || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (m.marca || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (m.usuario || '').toLowerCase().includes(searchTerm.toLowerCase());
       
       const movementDate = new Date(m.date);
       const matchesDate = !dateFilter || movementDate.toISOString().split('T')[0] === dateFilter;
       const matchesMonth = !monthFilter || (movementDate.getMonth() + 1).toString().padStart(2, '0') === monthFilter.split('-')[1] && movementDate.getFullYear().toString() === monthFilter.split('-')[0];
-      const matchesType = !typeFilter || m.tipo_movimento === typeFilter;
+      const matchesType = !typeFilter || m.tipo === typeFilter;
 
       return matchesSearch && matchesDate && matchesMonth && matchesType;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [stockMovements, searchTerm, dateFilter, monthFilter, typeFilter]);
+
+  const summary = useMemo(() => {
+    return filteredMovements.reduce((acc, current) => {
+      if (current.tipo === 'entrada') {
+        acc.entradas += toNum(current.quantidade);
+      } else {
+        acc.saidas += toNum(current.quantidade);
+      }
+      return acc;
+    }, { entradas: 0, saidas: 0 });
+  }, [filteredMovements, toNum]);
 
   const totalPages = Math.ceil(filteredMovements.length / itemsPerPage);
   const paginatedMovements = filteredMovements.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -64,22 +75,68 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'entrada': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-      case 'venda': return 'bg-rose-50 text-rose-700 border-rose-100';
-      case 'ajuste': return 'bg-amber-50 text-amber-700 border-amber-100';
-      case 'reposicao': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'saída': return 'bg-rose-50 text-rose-700 border-rose-100';
       default: return 'bg-gray-50 text-gray-700 border-gray-100';
+    }
+  };
+
+  const getOriginColor = (origin: string) => {
+    switch (origin) {
+      case 'compra': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'venda': return 'bg-purple-50 text-purple-700 border-purple-100';
+      case 'ajuste manual': return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'devolução': return 'bg-teal-50 text-teal-700 border-teal-100';
+      default: return 'bg-slate-50 text-slate-700 border-slate-100';
     }
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Summary Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-4 bg-emerald-50/50 border-emerald-100 border-2">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total Entradas</span>
+            <div className="p-1.5 bg-emerald-100 rounded-lg">
+              <ChevronRight className="w-4 h-4 text-emerald-600 rotate-[-90deg]" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-emerald-700">+{summary.entradas}</p>
+          <p className="text-[10px] text-emerald-500 font-bold mt-1 uppercase tracking-tight">Produtos recebidos</p>
+        </Card>
+
+        <Card className="p-4 bg-rose-50/50 border-rose-100 border-2">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Total Saídas</span>
+            <div className="p-1.5 bg-rose-100 rounded-lg">
+              <ChevronRight className="w-4 h-4 text-rose-600 rotate-[90deg]" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-rose-700">-{summary.saidas}</p>
+          <p className="text-[10px] text-rose-500 font-bold mt-1 uppercase tracking-tight">Produtos saídos</p>
+        </Card>
+
+        <Card className={`p-4 border-2 ${summary.entradas - summary.saidas >= 0 ? 'bg-blue-50/50 border-blue-100' : 'bg-amber-50/50 border-amber-100'}`}>
+          <div className="flex justify-between items-center mb-1">
+            <span className={`text-[10px] font-black uppercase tracking-widest ${summary.entradas - summary.saidas >= 0 ? 'text-blue-600' : 'text-amber-600'}`}>Saldo do Período</span>
+            <div className={`p-1.5 rounded-lg ${summary.entradas - summary.saidas >= 0 ? 'bg-blue-100' : 'bg-amber-100'}`}>
+              <Info className={`w-4 h-4 ${summary.entradas - summary.saidas >= 0 ? 'text-blue-600' : 'text-amber-600'}`} />
+            </div>
+          </div>
+          <p className={`text-2xl font-black ${summary.entradas - summary.saidas >= 0 ? 'text-blue-700' : 'text-amber-700'}`}>
+            {summary.entradas - summary.saidas}
+          </p>
+          <p className={`text-[10px] font-bold mt-1 uppercase tracking-tight ${summary.entradas - summary.saidas >= 0 ? 'text-blue-500' : 'text-amber-500'}`}>Diferença no estoque</p>
+        </Card>
+      </div>
+
       <Card className="p-3 sm:p-4 bg-white shadow-sm border border-slate-100 rounded-xl">
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
           <div className="flex-1 relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
             <input 
               type="text" 
-              placeholder="Produto, marca, usuário..." 
+              placeholder="Produto, origem, marca..." 
               className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all"
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -100,11 +157,9 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
               value={typeFilter}
               onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
             >
-              <option value="">Filtro</option>
+              <option value="">Tipo</option>
               <option value="entrada">Entrada</option>
-              <option value="venda">Venda</option>
-              <option value="reposicao">Reposição</option>
-              <option value="ajuste">Ajuste</option>
+              <option value="saída">Saída</option>
             </select>
           </div>
         </div>
@@ -118,7 +173,7 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Data</th>
                 <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Produto</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Tipo</th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Origem</th>
                 <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none">Qtd</th>
                 <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest leading-none text-right">Ações</th>
               </tr>
@@ -143,18 +198,18 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-widest ${
-                      m.tipo_movimento === 'entrada' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                      m.tipo_movimento === 'venda' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                      m.tipo_movimento === 'reposicao' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                      'bg-slate-100 text-slate-700 border-slate-200'
-                    }`}>
-                      {m.tipo_movimento}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex w-fit items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getTypeColor(m.tipo)}`}>
+                        {m.tipo}
+                      </span>
+                      <span className={`inline-flex w-fit items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getOriginColor(m.origem)}`}>
+                        {m.origem}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-sm font-bold ${m.quantidade > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {m.quantidade > 0 ? `+${m.quantidade}` : m.quantidade}
+                    <span className={`text-sm font-bold ${m.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {m.tipo === 'entrada' ? `+${m.quantidade}` : `-${m.quantidade}`}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -189,16 +244,16 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
                   <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-1">{m.marca} • {m.cor}/{m.tamanho}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${
-                    m.tipo_movimento === 'entrada' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                    m.tipo_movimento === 'venda' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                    m.tipo_movimento === 'reposicao' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                    'bg-slate-100 text-slate-700 border-slate-200'
-                  }`}>
-                    {m.tipo_movimento}
-                  </span>
-                  <span className={`text-[13px] font-black ${m.quantidade > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {m.quantidade > 0 ? `+${m.quantidade}` : m.quantidade}
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getTypeColor(m.tipo)}`}>
+                      {m.tipo}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getOriginColor(m.origem)}`}>
+                      {m.origem}
+                    </span>
+                  </div>
+                  <span className={`text-[13px] font-black ml-2 ${m.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {m.tipo === 'entrada' ? `+${m.quantidade}` : `-${m.quantidade}`}
                   </span>
                 </div>
               </div>
@@ -270,16 +325,23 @@ export const StockHistoryContent = ({ stockMovements, showNotification, showConf
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipo</p>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getTypeColor(selectedMovement.tipo_movimento)}`}>
-                  {selectedMovement.tipo_movimento}
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getTypeColor(selectedMovement.tipo)}`}>
+                  {selectedMovement.tipo}
                 </span>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantidade</p>
-                <p className={`text-lg font-black ${selectedMovement.quantidade > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {selectedMovement.quantidade > 0 ? '+' : ''}{selectedMovement.quantidade}
-                </p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Origem</p>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getOriginColor(selectedMovement.origem)}`}>
+                  {selectedMovement.origem}
+                </span>
               </div>
+            </div>
+            
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantidade</p>
+              <p className={`text-lg font-black ${selectedMovement.tipo === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {selectedMovement.tipo === 'entrada' ? '+' : '-'}{selectedMovement.quantidade}
+              </p>
             </div>
 
             <div className="space-y-4">

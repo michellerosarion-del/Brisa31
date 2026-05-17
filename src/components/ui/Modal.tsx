@@ -28,18 +28,21 @@ export const Modal = ({
     >
       <motion.div 
         onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.98, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`bg-white rounded-xl w-full ${maxWidth} overflow-hidden shadow-2xl border border-slate-200 m-2 sm:m-0`}
+        exit={{ opacity: 0, scale: 0.98, y: 30 }}
+        className={`bg-white rounded-[2.5rem] w-full ${maxWidth} overflow-hidden shadow-2xl border border-slate-200/50 m-2 sm:m-0`}
       >
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="font-sans font-bold text-slate-800 text-base sm:text-lg tracking-tight">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-all active:scale-90">
-            <X className="w-5 h-5 text-slate-500" />
+        <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-slate-100 flex justify-between items-center bg-white">
+          <div>
+            <h2 className="font-sans font-black text-slate-900 text-lg sm:text-xl tracking-tight uppercase">{title}</h2>
+            <div className="h-1 w-12 bg-slate-900 mt-2 rounded-full"></div>
+          </div>
+          <button onClick={onClose} className="p-3 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-2xl transition-all active:scale-90 border border-transparent hover:border-rose-100">
+            <X className="w-6 h-6" />
           </button>
         </div>
-        <div className={`${noPadding ? '' : 'p-4 sm:p-6'} max-h-[85vh] overflow-y-auto custom-scrollbar`}>
+        <div className={`${noPadding ? '' : 'p-6 sm:p-10'} max-h-[90vh] overflow-y-auto custom-scrollbar`}>
           {children}
         </div>
       </motion.div>

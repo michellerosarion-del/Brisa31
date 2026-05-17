@@ -61,11 +61,20 @@ export type SaleItem = {
   unit_price: number;
   total_item_value: number;
   cost: number;
+  frete?: number;
   tamanho: string;
   cor: string;
   brand: string;
   variation_id?: string | null;
   status: 'concluido' | 'cancelado';
+};
+
+export type Payment = {
+  method: string;
+  amount: number;
+  installments?: number;
+  fee_value?: number;
+  fee_percentage?: number;
 };
 
 export type Sale = {
@@ -77,6 +86,7 @@ export type Sale = {
   seller_id: string;
   seller_name: string;
   payment_method: string;
+  payments?: Payment[];
   discount_value: number;
   discount_type: 'percentage' | 'value';
   valor_bruto: number;
@@ -209,12 +219,14 @@ export type StockMovement = {
   marca: string;
   cor: string;
   tamanho: string;
-  tipo_movimento: 'entrada' | 'venda' | 'ajuste' | 'reposicao';
+  tipo: 'entrada' | 'saída';
+  origem: 'compra' | 'venda' | 'ajuste manual' | 'devolução';
   quantidade: number;
   date: string;
   usuario: string;
-  observations?: string;
   observacao?: string;
+  variation_id?: string;
+  reference_id?: string;
 };
 
 export type CartItem = {
@@ -223,6 +235,7 @@ export type CartItem = {
   quantity: number;
   unit_price: number;
   cost: number;
+  frete?: number;
   tamanho: string;
   cor: string;
   brand: string;
@@ -239,6 +252,8 @@ export type PurchaseItem = {
   total_cost: number;
   tamanho: string;
   cor: string;
+  proportional_freight?: number;
+  effective_unit_cost?: number;
 };
 
 export type Purchase = {
@@ -247,7 +262,11 @@ export type Purchase = {
   supplier_name: string;
   items: PurchaseItem[];
   total_value: number;
+  freight_total?: number;
+  estimated_delivery?: string;
   observations?: string;
   created_at: string;
-  status?: 'active' | 'cancelled';
+  status: 'pending' | 'received' | 'cancelled';
+  received_at?: string;
+  received_by?: string;
 };

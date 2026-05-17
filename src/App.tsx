@@ -1,47 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import { 
   db, 
-  auth, 
-  signInWithEmailAndPassword, 
-  onAuthStateChanged, 
-  signOut,
-  produtosRef,
-  clientesRef,
-  vendasRef,
-  gastosRef,
-  usuariosRef,
-  estoqueMovimentacoesRef,
-  configuracoesRef,
   handleFirestoreError,
-  handleStorageError,
   OperationType,
-  storage,
-  storageRef,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject
 } from './firebase';
 import { 
-  getDocs, 
   doc, 
-  getDoc, 
-  setDoc, 
-  addDoc, 
   updateDoc, 
   deleteDoc, 
-  query, 
-  orderBy, 
-  limit, 
-  where,
-  increment,
-  runTransaction,
-  collection,
-  onSnapshot
 } from 'firebase/firestore';
-import { 
-  updatePassword,
-  sendPasswordResetEmail
-} from 'firebase/auth';
 import { 
   Search, 
   ShoppingBag, 
@@ -94,12 +61,13 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toNum, formatCurrency } from './lib/utils';
+import { toNum, formatCurrency, getLocalDate, isSaleCompleted } from './lib/utils';
 
 // Types
 import { 
   Product, 
   Sale, 
+  Purchase,
   Customer, 
   Expense, 
   Seller, 
@@ -134,6 +102,8 @@ import { UserProfile } from './modules/Settings/UserProfile';
 import { StoreSettings } from './modules/Settings/StoreSettings';
 import { StockHistoryContent } from './modules/Products/StockHistory';
 import { Purchases } from './modules/Purchases/Purchases';
+import { StoreXRay } from './modules/Reports/StoreXRay';
+import { InventoryPerformance } from './modules/Reports/InventoryPerformance';
 import { CatalogPage } from './pages/Catalog';
 import { QuickSaleModal } from './modules/Sales/QuickSaleModal';
 
@@ -143,6 +113,17 @@ import { CustomerForm } from './components/forms/CustomerForm';
 import { TransactionForm } from './components/forms/TransactionForm';
 import { SellerForm } from './components/forms/SellerForm';
 import { AdForm } from './components/forms/AdForm';
+
+// Hooks
+import { useAuth } from './hooks/useAuth';
+import { useUI } from './hooks/useUI';
+import { useProducts } from './hooks/useProducts';
+import { useSales } from './hooks/useSales';
+import { useFinance } from './hooks/useFinance';
+import { useCustomers } from './hooks/useCustomers';
+import { usePurchases } from './hooks/usePurchases';
+import { useUsers } from './hooks/useUsers';
+import { useStoreSettings } from './hooks/useStoreSettings';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -154,17 +135,39 @@ interface ErrorBoundaryState {
 }
 
 const App = () => {
-  // --- State ---
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // --- UI State & Logic ---
+  const ui = useUI();
+  const { 
+    activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, 
+    notifications, showNotification, confirmConfig, setConfirmConfig, showConfirm,
+    isModalOpen, setIsModalOpen, modalType, setModalType,
+    editingItem, setEditingItem, isQuickSaleModalOpen, setIsQuickSaleModalOpen,
+    quickSaleTab, setQuickSaleTab
+  } = ui;
+
   const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.hash + window.location.search);
+  
+  // Hooks de Dados
+  const { user, authLoading, login, logout, resetPassword, changePassword } = useAuth();
+  const { storeSettings } = useStoreSettings(!!user);
+  const isAdmin = user?.role === 'admin';
+
+  const { 
+    products, stockMovements, categories, loadMoreProducts, loadMoreStock,
+    saveProduct, uploadImages, adjustStock, toggleFeatured 
+  } = useProducts(!!user);
+
+  const { 
+    sales, loadMoreSales, completeSale, deleteSale, cancelSale, cancelItem 
+  } = useSales(!!user);
+
+  const { 
+    expenses, ads, loadMoreExpenses, loadMoreAds, saveTransaction, saveAd 
+  } = useFinance(isAdmin);
+
+  const { customers, loadMoreCustomers, saveCustomer } = useCustomers(!!user);
+  const { purchases } = usePurchases(isAdmin);
+  const { users, saveUser } = useUsers(isAdmin);
 
   // Handle simple routing
   useEffect(() => {
@@ -183,223 +186,42 @@ const App = () => {
     const p = currentPath.toLowerCase();
     return p.includes('/catalogo') || p.includes('#catalog') || p.includes('view=catalog');
   }, [currentPath]);
-  
-  // Data State
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [ads, setAds] = useState<Ad[]>([]);
-  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
-  const [storeSettings, setStoreSettings] = useState<StoreSettingsType>({
-    id: '',
-    nome_loja: 'Minha Loja',
-    logo_url: '',
-    telefone_whatsapp: '',
-    mensagem_padrao_whatsapp: '',
-    monthly_goal: 10000,
-    card_fee: 4.99,
-    low_stock_threshold: 3,
-    low_stock_alert_enabled: true
-  });
 
-  // UI State
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [confirmConfig, setConfirmConfig] = useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<string>('');
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [isQuickSaleModalOpen, setIsQuickSaleModalOpen] = useState(false);
-  const [quickSaleTab, setQuickSaleTab] = useState<'products' | 'cart'>('products');
-  
-  // Pagination State - Reduced initial limits to save quota
-  const [productsLimit, setProductsLimit] = useState(100);
-  const [salesLimit, setSalesLimit] = useState(50);
-  const [customersLimit, setCustomersLimit] = useState(50);
-  const [expensesLimit, setExpensesLimit] = useState(50);
-  const [stockLimit, setStockLimit] = useState(50);
-  const [adsLimit, setAdsLimit] = useState(50);
-  
-  // Sales Filters
+  // Local UI State (Filters, Cart, etc)
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
   const [salesDateFilter, setSalesDateFilter] = useState('');
+  const [salesStartDate, setSalesStartDate] = useState('');
+  const [salesEndDate, setSalesEndDate] = useState('');
   const [globalMonthFilter, setGlobalMonthFilter] = useState(new Date().toISOString().slice(0, 7));
   const [salesPaymentFilter, setSalesPaymentFilter] = useState('');
   const [salesSellerFilter, setSalesSellerFilter] = useState('');
   const [salesStatusFilter, setSalesStatusFilter] = useState('');
 
-  // Product Filters
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  
-  const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<any[]>([]);
-  const [saleDiscount, setSaleDiscount] = useState(0);
+  const [saleDiscount, setSaleDiscount] = useState<string>('0');
   const [saleDiscountType, setSaleDiscountType] = useState<'value' | 'percentage'>('value');
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
-  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   
-  // Form State
   const [tempVariations, setTempVariations] = useState<Variation[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
-
-  // --- Notifications & Confirm ---
-  const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-    const id = Date.now();
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 3000);
-  }, []);
-
-  const showConfirm = useCallback((title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'info') => {
-    setConfirmConfig({ title, message, onConfirm, type });
-  }, []);
-
-  // --- Auth & Initial Data ---
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      if (authUser) {
-        // Fetch user doc for role/additional info
-        getDoc(doc(db, 'usuarios', authUser.uid)).then((docSnap) => {
-          if (docSnap.exists()) {
-            setUser({ ...authUser, ...docSnap.data(), id: authUser.uid });
-          } else {
-            setUser({ ...authUser, id: authUser.uid });
-          }
-        });
-      } else {
-        setUser(null);
-      }
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      showNotification('Sessão encerrada');
-    } catch (err: any) {
-      showNotification('Erro ao sair: ' + err.message, 'error');
-    }
-  };
-
-  // --- Handlers: Real-time Data Listeners ---
-  useEffect(() => {
-    if (!user) return;
-
-    // Listeners for essential collections
-    const unsubs: (() => void)[] = [];
-
-    // 1. Products
-    const qProd = query(produtosRef, orderBy('name', 'asc'), limit(productsLimit));
-    unsubs.push(onSnapshot(qProd, (snap) => {
-      setProducts(snap.docs.map(d => {
-        const data = d.data();
-        const variations = data.variations || data.variacoes || data.options || [];
-        const normalizedVariations = variations.map((v: any) => ({
-          ...v,
-          id: v.id || Math.random().toString(36).substr(2, 9),
-          cor: v.cor || v.color || 'Única',
-          tamanho: v.tamanho || v.size || 'Único',
-          estoque: toNum(v.estoque || v.stock || 0)
-        }));
-        
-        // Ensure total stock is recalculated if variations exist
-        const totalStock = variations.length > 0 
-          ? normalizedVariations.reduce((sum: number, v: any) => sum + v.estoque, 0)
-          : toNum(data.stock);
-
-        return { 
-          id: d.id, 
-          ...data,
-          variations: normalizedVariations,
-          has_variations: data.has_variations === true || variations.length > 0,
-          stock: totalStock // Sync main stock with variations sum
-        } as Product;
-      }));
-    }, err => handleFirestoreError(err, OperationType.LIST, 'produtos')));
-
-    // 2. Sales
-    const qSales = query(vendasRef, orderBy('date', 'desc'), limit(salesLimit));
-    unsubs.push(onSnapshot(qSales, (snap) => {
-      setSales(snap.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
-    }, err => handleFirestoreError(err, OperationType.LIST, 'vendas')));
-
-    // 3. Customers
-    const qCust = query(clientesRef, orderBy('name', 'asc'), limit(customersLimit));
-    unsubs.push(onSnapshot(qCust, (snap) => {
-      setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
-    }, err => handleFirestoreError(err, OperationType.LIST, 'clientes')));
-
-    // 4. Expenses
-    const qExp = query(gastosRef, orderBy('date', 'desc'), limit(expensesLimit));
-    unsubs.push(onSnapshot(qExp, (snap) => {
-      setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)));
-    }, err => handleFirestoreError(err, OperationType.LIST, 'gastos')));
-
-    // 5. Users/Sellers
-    const qUsers = query(usuariosRef, orderBy('name', 'asc'), limit(100));
-    unsubs.push(onSnapshot(qUsers, (snap) => {
-      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, err => handleFirestoreError(err, OperationType.LIST, 'usuarios')));
-
-    // 6. Config
-    unsubs.push(onSnapshot(configuracoesRef, (snap) => {
-      if (!snap.empty) {
-        setStoreSettings({ id: snap.docs[0].id, ...snap.docs[0].data() } as any);
-      }
-    }, err => handleFirestoreError(err, OperationType.LIST, 'configuracoes')));
-
-    // 7. Recent Stock Movements
-    const qStock = query(estoqueMovimentacoesRef, orderBy('date', 'desc'), limit(stockLimit));
-    unsubs.push(onSnapshot(qStock, (snap) => {
-      setStockMovements(snap.docs.map(d => ({ id: d.id, ...d.data() } as StockMovement)));
-    }, err => handleFirestoreError(err, OperationType.LIST, 'estoque_movimentacoes')));
-
-    return () => unsubs.forEach(fn => fn());
-  }, [user, productsLimit, salesLimit, customersLimit, expensesLimit, stockLimit]);
-
-  // Periodic Refresh replaced by onSnapshot logic above
-  const fetchData = useCallback(async () => {
-    // This function is now mostly redundant but kept for any manual force refresh needs
-    // We already use onSnapshot for live updates.
-    console.log("Using live synchronization...");
-  }, []);
-
-  const loadMoreProducts = useCallback(() => {
-    setProductsLimit(prev => Math.min(prev + 50, 2000));
-  }, []);
-
-  const loadMoreSales = useCallback(() => {
-    setSalesLimit(prev => Math.min(prev + 50, 1000));
-  }, []);
-
-  const loadMoreCustomers = useCallback(() => {
-    setCustomersLimit(prev => Math.min(prev + 50, 1000));
-  }, []);
-
-  const loadMoreExpenses = useCallback(() => {
-    setExpensesLimit(prev => Math.min(prev + 50, 1000));
-  }, []);
-
-  const loadMoreStock = useCallback(() => {
-    setStockLimit(prev => Math.min(prev + 50, 500));
-  }, []);
-
-  const loadMoreAds = useCallback(() => {
-    setAdsLimit(prev => Math.min(prev + 50, 500));
-  }, []);
 
   // --- Handlers ---
   const handleEdit = (type: string, item: any) => {
-    if (user?.role !== 'admin' && ['vendedores', 'configuracoes', 'financeiro', 'relatorios'].includes(type)) {
+    if (!isAdmin && ['vendedores', 'configuracoes', 'financeiro', 'relatorios'].includes(type)) {
       showNotification('Acesso restrito ao administrador', 'error');
       return;
     }
@@ -407,7 +229,7 @@ const App = () => {
     if (type === 'vendas') {
       setEditingSale(item);
       setCart(item.items || []);
-      setSaleDiscount(item.discount || 0);
+      setSaleDiscount(String(item.discount || 0));
       setSaleDiscountType(item.discount_type || 'value');
       setIsQuickSaleModalOpen(true);
       return;
@@ -422,95 +244,24 @@ const App = () => {
     setIsModalOpen(true);
   };
 
-  const handleAddProduct = async (e: React.FormEvent) => {
+  const onAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUploading(true);
-    console.log('Iniciando processo de cadastro/edição de produto...');
-    
-    const formData = new FormData(e.target as HTMLFormElement);
-    const data = Object.fromEntries(formData);
-
+    const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
     try {
-      // Validar tamanho dos arquivos (2MB = 2 * 1024 * 1024 bytes)
-      const MAX_FILE_SIZE = 2 * 1024 * 1024;
-      for (const file of selectedFiles) {
-        if (file.size > MAX_FILE_SIZE) {
-          throw new Error(`O arquivo ${file.name} excede o limite de 2MB.`);
-        }
-      }
-
-      const uploadedUrls = [];
-      console.log(`Diagnostic: Starting upload for ${selectedFiles.length} files. Auth state: ${!!auth.currentUser ? 'Logged in' : 'Not logged in'}`);
-      
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        try {
-          console.log(`Diagnostic [Step 1/3]: Preparing ref for file ${i + 1}/${selectedFiles.length}: ${file.name}`);
-          const fileRef = storageRef(storage, `produtos/${Date.now()}_${file.name}`);
-          
-          console.log(`Diagnostic [Step 2/3]: Calling uploadBytes for ${file.name}...`);
-          const snapshot = await uploadBytes(fileRef, file);
-          console.log(`Diagnostic [Step 2/3]: uploadBytes SUCCESS for ${file.name}`);
-          
-          console.log(`Diagnostic [Step 3/3]: Calling getDownloadURL for ${file.name}...`);
-          const url = await getDownloadURL(snapshot.ref);
-          uploadedUrls.push(url);
-          console.log(`Diagnostic [Step 3/3]: getDownloadURL SUCCESS: ${url}`);
-        } catch (uploadError: any) {
-          const detailedErrorMessage = handleStorageError(uploadError);
-          showNotification(detailedErrorMessage, 'error');
-          throw new Error(detailedErrorMessage);
-        }
-      }
-
-      const finalImages = [...existingImages, ...uploadedUrls];
-      const totalStock = tempVariations.length > 0 
-        ? tempVariations.reduce((sum, v) => sum + toNum(v.estoque), 0)
-        : toNum(data.stock);
-
-      const productData = {
-        name: data.name,
-        category: data.category,
-        brand: data.brand,
-        code: data.code,
-        cost: toNum(data.cost),
-        frete: toNum(data.frete),
-        price: toNum(data.price),
-        cash_price: toNum(data.cash_price) || toNum(data.price),
-        promo_price: toNum(data.promo_price) || 0,
-        stock: totalStock,
-        min_stock: toNum(data.min_stock),
-        cor: data.cor || 'Única',
-        tamanho: data.tamanho || 'Único',
-        status: data.status || 'ativo',
-        variations: tempVariations,
-        images: finalImages,
-        updatedAt: new Date().toISOString()
-      };
-
-      console.log('Salvando dados no Firestore...');
-      if (editingItem) {
-        await updateDoc(doc(db, 'produtos', editingItem.id), productData);
-        showNotification('Produto atualizado!');
-      } else {
-        await addDoc(produtosRef, { ...productData, createdAt: new Date().toISOString() });
-        showNotification('Produto cadastrado!');
-      }
-      console.log('Processo finalizado com sucesso.');
+      const uploadedUrls = await uploadImages(selectedFiles);
+      await saveProduct(data, editingItem, user, tempVariations, existingImages, uploadedUrls);
+      showNotification(editingItem ? 'Produto atualizado!' : 'Produto cadastrado!');
       setIsModalOpen(false);
+      setSelectedFiles([]);
     } catch (err: any) {
-      console.error('Erro no processo de salvamento do produto:', err);
       showNotification(err.message || 'Erro ao salvar produto', 'error');
-      // Adicionalmente loga no formato padrão se for erro do Firestore
-      if (err.code || err.name === 'FirebaseError') {
-        handleFirestoreError(err, OperationType.WRITE, 'produtos');
-      }
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleCompleteSale = async (
+  const onCompleteSale = async (
     paymentMethod: string, 
     sellerName: string, 
     finalValue: number, 
@@ -520,497 +271,201 @@ const App = () => {
     grossValue?: number,
     netValue?: number,
     feeValue?: number,
-    feePercentage?: number
+    feePercentage?: number,
+    adjustment?: number,
+    payments?: any[]
   ) => {
-    if (cart.length === 0) return;
-
     try {
-      const saleDate = editingSale ? editingSale.date : new Date().toISOString();
-      const totalCostItems = cart.reduce((sum, item) => sum + ((toNum(item.cost) + toNum(item.frete)) * toNum(item.quantity)), 0);
-
-      const saleData = {
-        customer_id: customerId || 'consumidor-final',
-        customer_name: customerName || 'Consumidor Final',
-        date: saleDate,
-        payment_method: paymentMethod,
-        seller_id: user?.id || 'manual',
-        seller_name: sellerName || 'Sistema',
-        status: 'concluida',
-        items: cart.map(item => ({
-          ...item,
-          status: 'concluido'
-        })),
-        subtotal: cart.reduce((sum, i) => sum + (toNum(i.unit_price) * toNum(i.quantity)), 0),
-        discount_value: toNum(saleDiscount),
-        discount_type: saleDiscountType,
-        valor_bruto: toNum(grossValue),
-        valor_liquido: toNum(netValue),
-        tax_value: toNum(feeValue),
-        installment_fee_value: toNum(feeValue),
-        installment_fee_percentage: toNum(feePercentage),
-        total_cost: totalCostItems,
-        profit: toNum(netValue) - totalCostItems,
-        installments: toNum(installments),
-        createdAt: new Date().toISOString()
-      };
-
-      await runTransaction(db, async (transaction) => {
-        // 1. Collect all product IDs to read
-        const productIds = new Set<string>();
-        if (editingSale) {
-          editingSale.items.forEach(i => productIds.add(i.product_id));
-        }
-        cart.forEach(i => productIds.add(i.product_id));
-
-        // 2. READ phase - all transaction.get() must happen here
-        const productSnaps = new Map<string, any>();
-        for (const pid of productIds) {
-          const snap = await transaction.get(doc(db, 'produtos', pid));
-          if (snap.exists()) {
-            productSnaps.set(pid, snap.data());
-          }
-        }
-
-        // 3. Calculation & WRITE phase
-        
-        // If editing, restore stock from old sale first
-        if (editingSale) {
-          for (const oldItem of editingSale.items) {
-            if (oldItem.status === 'cancelado') continue;
-            const pData = productSnaps.get(oldItem.product_id);
-            if (pData) {
-              const newStock = toNum(pData.stock) + toNum(oldItem.quantity);
-              pData.stock = newStock; // Update local copy for subsequent items
-              
-              const updateObj: any = { stock: newStock };
-              if (pData.variations && oldItem.variation_id) {
-                pData.variations = pData.variations.map((v: any) => 
-                  v.id === oldItem.variation_id ? { ...v, estoque: toNum(v.estoque) + toNum(oldItem.quantity) } : v
-                );
-                updateObj.variations = pData.variations;
-              }
-              transaction.update(doc(db, 'produtos', oldItem.product_id), updateObj);
-            }
-          }
-        }
-
-        // Apply new stock deductions
-        for (const item of cart) {
-          const pData = productSnaps.get(item.product_id);
-          if (pData) {
-            const newStock = toNum(pData.stock) - toNum(item.quantity);
-            pData.stock = newStock; // Update local copy
-            
-            const updateObj: any = { stock: newStock };
-            if (pData.variations && item.variation_id) {
-              pData.variations = pData.variations.map((v: any) => 
-                v.id === item.variation_id ? { ...v, estoque: toNum(v.estoque) - toNum(item.quantity) } : v
-              );
-              updateObj.variations = pData.variations;
-            }
-            transaction.update(doc(db, 'produtos', item.product_id), updateObj);
-
-            // Movement record
-            transaction.set(doc(estoqueMovimentacoesRef), {
-              product_id: item.product_id,
-              produto: item.product_name,
-              quantidade: -item.quantity,
-              tipo_movimento: 'venda',
-              usuario: user?.name || sellerName || 'Sistema',
-              date: saleDate,
-              createdAt: new Date().toISOString()
-            });
-          }
-        }
-
-        if (editingSale) {
-          transaction.set(doc(db, 'vendas', editingSale.id), saleData);
-        } else {
-          transaction.set(doc(vendasRef), saleData);
-        }
+      await completeSale({
+        paymentMethod,
+        sellerName,
+        finalValue,
+        customerId,
+        customerName,
+        installments,
+        grossValue,
+        netValue,
+        feeValue,
+        feePercentage,
+        adjustment,
+        payments,
+        cart,
+        editingSale,
+        user,
+        saleDiscount,
+        saleDiscountType
       });
-
       showNotification(editingSale ? 'Venda atualizada!' : 'Venda realizada com sucesso!');
       setIsQuickSaleModalOpen(false);
       setCart([]);
       setEditingSale(null);
-      setSaleDiscount(0);
+      setSaleDiscount('0');
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'vendas');
+      showNotification('Erro ao processar venda', 'error');
     }
   };
 
-  const handleDeleteSale = async (id: string) => {
-    if (user?.role !== 'admin') {
-      showNotification('Acesso restrito ao administrador', 'error');
-      return;
-    }
+  const onDeleteSale = (id: string) => {
     showConfirm('Excluir Venda', 'Tem certeza? O estoque será restaurado automaticamente.', async () => {
       try {
-        await runTransaction(db, async (transaction) => {
-          const saleRef = doc(db, 'vendas', id);
-          const saleDoc = await transaction.get(saleRef);
-          if (!saleDoc.exists()) return;
-          const sale = saleDoc.data() as Sale;
-
-          // Collect all product IDs to read before any writes
-          const productIds = new Set<string>();
-          if (sale.status !== 'cancelada') {
-            sale.items.forEach(i => {
-              if (i.status !== 'cancelado') productIds.add(i.product_id);
-            });
-          }
-
-          const productSnaps = new Map<string, any>();
-          for (const pid of productIds) {
-            const snap = await transaction.get(doc(db, 'produtos', pid));
-            if (snap.exists()) {
-              productSnaps.set(pid, snap.data());
-            }
-          }
-
-          // Now perform all WRITES
-          if (sale.status !== 'cancelada') {
-            for (const item of sale.items) {
-              if (item.status === 'cancelado') continue;
-              
-              const pData = productSnaps.get(item.product_id);
-              if (pData) {
-                const newStock = toNum(pData.stock) + toNum(item.quantity);
-                pData.stock = newStock; // Local update
-
-                const updateObj: any = { stock: newStock };
-                if (pData.variations && item.variation_id) {
-                  pData.variations = pData.variations.map((v: any) => 
-                    v.id === item.variation_id ? { ...v, estoque: toNum(v.estoque) + toNum(item.quantity) } : v
-                  );
-                  updateObj.variations = pData.variations;
-                }
-                transaction.update(doc(db, 'produtos', item.product_id), updateObj);
-
-                // Record Restock Movement
-                transaction.set(doc(estoqueMovimentacoesRef), {
-                  product_id: item.product_id,
-                  produto: item.product_name,
-                  quantidade: toNum(item.quantity),
-                  tipo_movimento: 'ajuste',
-                  usuario: user?.name || 'Sistema',
-                  observacao: `Estorno de venda deletada (${id})`,
-                  date: new Date().toISOString(),
-                  createdAt: new Date().toISOString()
-                });
-              }
-            }
-          }
-
-          transaction.delete(saleRef);
-        });
-
+        await deleteSale(id, user);
         showNotification('Venda excluída e estoque restaurado!');
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.DELETE, 'vendas');
+        showNotification('Erro ao excluir venda', 'error');
       }
     }, 'danger');
   };
 
-  const handleAddCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const data = Object.fromEntries(formData);
-    try {
-      const customerData = {
-        name: data.name,
-        phone: data.phone,
-        instagram: data.instagram || '',
-        status: data.status || 'ativo',
-        updatedAt: new Date().toISOString()
-      };
-      if (editingItem) {
-        await updateDoc(doc(db, 'clientes', editingItem.id), customerData);
-        showNotification('Cliente atualizado!');
-      } else {
-        await addDoc(clientesRef, { ...customerData, createdAt: new Date().toISOString() });
-        showNotification('Cliente cadastrado!');
+  const onCancelSale = (id: string) => {
+    showConfirm('Cancelar Venda', 'Deseja realmente cancelar esta venda? O status mudará para cancelada e os produtos voltarão ao estoque.', async () => {
+      try {
+        await cancelSale(id, user);
+        showNotification('Venda cancelada com sucesso!');
+      } catch (err: any) {
+        showNotification('Erro ao cancelar venda', 'error');
       }
+    }, 'danger');
+  };
+
+  const onCancelItem = (saleId: string, itemIndex: number) => {
+    showConfirm('Cancelar Item', 'Confirmar cancelamento deste item?', async () => {
+      try {
+        await cancelItem(saleId, itemIndex, user);
+        showNotification('Item cancelado e valores atualizados!');
+      } catch (err: any) {
+        showNotification('Erro ao cancelar item', 'error');
+      }
+    });
+  };
+
+  const onAddCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
+    try {
+      await saveCustomer(data, editingItem);
+      showNotification(editingItem ? 'Cliente atualizado!' : 'Cliente cadastrado!');
       setIsModalOpen(false);
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'clientes');
+      showNotification('Erro ao salvar cliente', 'error');
     }
   };
 
-  const handleAddTransaction = async (e: React.FormEvent) => {
+  const onAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const data = Object.fromEntries(formData);
+    const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
     try {
-      const flow_type = data.flow_type || 'saída';
-      const tData = {
-        type: data.type,
-        flow_type,
-        payment_method: data.payment_method || 'pix',
-        description: data.description,
-        value: toNum(data.value),
-        date: data.date || new Date().toISOString(),
-        observations: data.observations || '',
-        updatedAt: new Date().toISOString()
-      };
-      if (editingItem) {
-        await updateDoc(doc(db, 'gastos', editingItem.id), tData);
-      } else {
-        await addDoc(gastosRef, { ...tData, createdAt: new Date().toISOString() });
-      }
+      await saveTransaction(data, editingItem);
       showNotification('Lançamento salvo!');
       setIsModalOpen(false);
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'gastos');
+      showNotification('Erro ao salvar lançamento', 'error');
     }
   };
 
-  const handleAddUser = async (e: React.FormEvent) => {
+  const onAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const data = Object.fromEntries(formData);
+    const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
     try {
-      const uData = {
-        name: data.name,
-        email: data.email,
-        role: data.role || 'vendedor',
-        status: data.status || 'ativo',
-        updatedAt: new Date().toISOString()
-      };
-      if (editingItem) {
-        await updateDoc(doc(db, 'usuarios', editingItem.id), uData);
-        showNotification('Usuário atualizado!');
-      } else {
-        await addDoc(usuariosRef, { ...uData, createdAt: new Date().toISOString() });
-        showNotification('Usuário cadastrado!');
-      }
+      await saveUser(data, editingItem);
+      showNotification(editingItem ? 'Usuário atualizado!' : 'Usuário cadastrado!');
       setIsModalOpen(false);
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'usuarios');
+      showNotification('Erro ao salvar usuário: ' + err.message, 'error');
     }
   };
 
-  const handleResetUserPassword = async (email: string) => {
-    if (!email) return;
-    showConfirm('Resetar Senha', `Deseja enviar um e-mail de recuperação para ${email}?`, async () => {
-      try {
-        await sendPasswordResetEmail(auth, email);
-        showNotification(`E-mail enviado para ${email}`);
-      } catch (err: any) {
-        showNotification(err.message, 'error');
-      }
-    });
-  };
-
-  const handleAddAd = async (e: React.FormEvent) => {
+  const onAddAd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const data = Object.fromEntries(formData);
-
+    const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
     try {
-      const adData = {
-        platform: data.platform,
-        investment: toNum(data.investment),
-        sales_generated: toNum(data.sales_generated),
-        date: new Date().toISOString()
-      };
-
-      if (editingItem) {
-        await updateDoc(doc(db, 'anuncios', editingItem.id), adData);
-        showNotification('Anúncio atualizado!');
-      } else {
-        await addDoc(collection(db, 'anuncios'), { ...adData, createdAt: new Date().toISOString() });
-        showNotification('Anúncio cadastrado!');
-      }
+      await saveAd(data, editingItem);
+      showNotification(editingItem ? 'Anúncio atualizado!' : 'Anúncio cadastrado!');
       setIsModalOpen(false);
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'anuncios');
+      showNotification('Erro ao salvar anúncio', 'error');
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmNewPassword) {
-      showNotification('As senhas não coincidem', 'error');
-      return;
-    }
-    if (newPassword.length < 6) {
-      showNotification('A senha deve ter pelo menos 6 caracteres', 'error');
-      return;
-    }
-    
+    setIsLoggingIn(true);
+    const { login: email, password } = Object.fromEntries(new FormData(e.target as HTMLFormElement));
     try {
-      await updatePassword(auth.currentUser!, newPassword);
-      showNotification('Senha atualizada com sucesso!');
+      await login(email as string, password as string);
+      showNotification('Bem-vindo de volta!');
+    } catch (authErr: any) {
+      showNotification('E-mail ou senha incorretos', 'error');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const onForgotPassword = async () => {
+    if (!loginEmail) return showNotification('Digite seu e-mail de acesso', 'error');
+    setIsResettingPassword(true);
+    try {
+      await resetPassword(loginEmail);
+      showNotification('Link de recuperação enviado!', 'success');
+    } catch (err: any) {
+      showNotification('Erro ao enviar e-mail', 'error');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const onUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) return showNotification('As senhas não coincidem', 'error');
+    try {
+      await changePassword(newPassword);
+      showNotification('Senha atualizada!');
       setIsChangePasswordModalOpen(false);
       setNewPassword('');
       setConfirmNewPassword('');
-      setCurrentPassword('');
     } catch (err: any) {
-      showNotification('Erro ao atualizar senha: ' + err.message, 'error');
+      showNotification('Erro ao atualizar senha', 'error');
     }
   };
 
-  const handleAdjustStock = async (id: string, amount: number, type: string, variationId?: string) => {
-    try {
-      await runTransaction(db, async (transaction) => {
-        const prodRef = doc(db, 'produtos', id);
-        const prodDoc = await transaction.get(prodRef);
-        if (!prodDoc.exists()) return;
-
-        const pData = prodDoc.data();
-        const newTotalStock = toNum(pData.stock) + amount;
-        transaction.update(prodRef, { stock: newTotalStock });
-
-        if (variationId && pData.variations) {
-          const updatedVars = pData.variations.map((v: any) => 
-            v.id === variationId ? { ...v, estoque: toNum(v.estoque) + amount } : v
-          );
-          transaction.update(prodRef, { variations: updatedVars });
-        }
-
-        transaction.set(doc(estoqueMovimentacoesRef), {
-          product_id: id,
-          produto: pData.name,
-          quantidade: amount,
-          tipo_movimento: type === 'reposicao' ? 'entrada' : 'ajuste',
-          usuario: user?.name || 'Sistema',
-          date: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          variation_id: variationId
-        });
-      });
-      showNotification('Estoque atualizado!');
-    } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'produtos');
-    }
-  };
-
-  const handlePromote = async (id: string) => {
-    const p = products.find(prod => prod.id === id);
-    if (!p) return;
-    try {
-      await updateDoc(doc(db, 'produtos', id), { is_featured: !p.is_featured });
-      showNotification(p.is_featured ? 'Destaque removido' : 'Produto destacado!');
-    } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, 'produtos');
-    }
-  };
-
-  const handleCancelItem = async (saleId: string, itemIndex: number) => {
-    if (user?.role !== 'admin') {
-      showNotification('Acesso restrito ao administrador para cancelamentos', 'error');
-      return;
-    }
-
-    showConfirm('Cancelar Item', 'Confirmar cancelamento deste item?', async () => {
+  const onResetUserPassword = async (email: string) => {
+    showConfirm('Resetar Senha', `Deseja enviar e-mail de recuperação para ${email}?`, async () => {
       try {
-        await runTransaction(db, async (transaction) => {
-          const saleRef = doc(db, 'vendas', saleId);
-          const saleDoc = await transaction.get(saleRef);
-          if (!saleDoc.exists()) return;
-          const sale = saleDoc.data() as Sale;
-
-          if (sale.status === 'cancelada') return;
-          const item = sale.items[itemIndex];
-          if (!item || item.status === 'cancelado') return;
-
-          // 1. Restore Stock
-          const prodRef = doc(db, 'produtos', item.product_id);
-          const prodDoc = await transaction.get(prodRef);
-          if (prodDoc.exists()) {
-            const pData = prodDoc.data();
-            const newStock = toNum(pData.stock) + toNum(item.quantity);
-            transaction.update(prodRef, { stock: newStock });
-            
-            if (pData.variations && item.variation_id) {
-              const updatedVars = pData.variations.map((v: any) => 
-                v.id === item.variation_id ? { ...v, estoque: toNum(v.estoque) + toNum(item.quantity) } : v
-              );
-              transaction.update(prodRef, { variations: updatedVars });
-            }
-
-            // Movement
-            transaction.set(doc(estoqueMovimentacoesRef), {
-              product_id: item.product_id,
-              produto: item.product_name,
-              quantidade: toNum(item.quantity),
-              tipo_movimento: 'ajuste',
-              usuario: user?.name || 'Sistema',
-              observacao: `Item cancelado na venda ${saleId.slice(-6)}`,
-              date: new Date().toISOString(),
-              createdAt: new Date().toISOString()
-            });
-          }
-
-          // 2. Update Sale Item status
-          const updatedItems = sale.items.map((it, idx) => 
-            idx === itemIndex ? { ...it, status: 'cancelado' } : it
-          );
-
-          // 3. Recalculate Sale values based on remaining active items
-          const activeItems = updatedItems.filter(it => it.status !== 'cancelado');
-          
-          if (activeItems.length === 0) {
-            // Cancel whole sale if no items left
-            transaction.update(saleRef, { 
-              items: updatedItems,
-              status: 'cancelada',
-              valor_bruto: 0,
-              valor_liquido: 0,
-              profit: 0,
-              total_cost: 0,
-              tax_value: 0
-            });
-          } else {
-            // Note: Since discounts/fees applied to the total, we maintain them or scale them?
-            // Re-calculating correctly requires checking how we handle fees
-            const subtotal = activeItems.reduce((sum, i) => sum + (toNum(i.unit_price) * toNum(i.quantity)), 0);
-            const totalCostItems = activeItems.reduce((sum, item) => sum + (toNum(item.cost) * toNum(item.quantity)), 0);
-            
-            // Re-apply discount
-            const discount = sale.discount_type === 'percentage' 
-              ? (subtotal * (toNum(sale.discount_value) / 100)) 
-              : toNum(sale.discount_value);
-            
-            const bruto = Math.max(0, subtotal - discount);
-            
-            // PRESERVE original fee percentage
-            const feePercent = toNum(sale.installment_fee_percentage);
-            const fee = bruto * (feePercent / 100);
-            const liquido = bruto - fee;
-
-            transaction.update(saleRef, {
-              items: updatedItems,
-              subtotal,
-              valor_bruto: bruto,
-              valor_liquido: liquido,
-              tax_value: fee,
-              installment_fee_value: fee,
-              total_cost: totalCostItems,
-              profit: liquido - totalCostItems
-            });
-          }
-        });
-        showNotification('Item cancelado e valores atualizados!');
+        await resetPassword(email);
+        showNotification('E-mail enviado!');
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.WRITE, 'vendas');
+        showNotification('Erro ao enviar e-mail', 'error');
       }
     });
   };
 
-  const categories = useMemo(() => Array.from(new Set(products.map(p => p.category))).sort(), [products]);
+  const onAdjustStock = async (id: string, amount: number, type: string, variationId?: string) => {
+    try {
+      await adjustStock(id, amount, user, variationId);
+      showNotification('Estoque atualizado!');
+    } catch (err: any) {
+      showNotification('Erro ao ajustar estoque', 'error');
+    }
+  };
 
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
-                            p.brand.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-                            p.code.toLowerCase().includes(productSearchTerm.toLowerCase());
-      const matchesCategory = !categoryFilter || p.category === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, productSearchTerm, categoryFilter]);
+  const onTogglePromote = async (id: string) => {
+    try {
+      const p = products.find(prod => prod.id === id);
+      if (!p) return;
+      await toggleFeatured(p);
+      showNotification(p.is_featured ? 'Destaque removido' : 'Produto destacado!');
+    } catch (err: any) {
+      showNotification('Erro ao alterar destaque', 'error');
+    }
+  };
+
+  const onLogout = async () => {
+    try {
+      await logout();
+      showNotification('Sessão encerrada');
+    } catch (err: any) {
+      showNotification('Erro ao sair', 'error');
+    }
+  };
 
   const getCssColor = (color: string) => {
     const colors: Record<string, string> = {
@@ -1019,50 +474,6 @@ const App = () => {
       'Cinza': '#64748b', 'Bege': '#f5f5dc', 'Marrom': '#78350f', 'Laranja': '#f97316'
     };
     return colors[color] || '#cbd5e1';
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    const formData = new FormData(e.target as HTMLFormElement);
-    const { login: email, password } = Object.fromEntries(formData);
-    
-    try {
-      await signInWithEmailAndPassword(auth, email as string, password as string);
-      showNotification('Bem-vindo de volta!');
-    } catch (err: any) {
-      let errorMessage = 'E-mail ou senha incorretos';
-      if (err.code === 'auth/user-not-found') errorMessage = 'Usuário não encontrado';
-      if (err.code === 'auth/wrong-password') errorMessage = 'Senha incorreta';
-      if (err.code === 'auth/too-many-requests') errorMessage = 'Muitas tentativas. Tente novamente mais tarde.';
-      
-      showNotification(errorMessage, 'error');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!loginEmail) {
-      showNotification('Digite seu e-mail de acesso', 'error');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(loginEmail)) {
-      showNotification('E-mail inválido', 'error');
-      return;
-    }
-
-    setIsResettingPassword(true);
-    try {
-      await sendPasswordResetEmail(auth, loginEmail);
-      showNotification('Enviamos um link para redefinir sua senha no seu e-mail', 'success');
-    } catch (err: any) {
-      showNotification('Erro ao enviar e-mail: ' + err.message, 'error');
-    } finally {
-      setIsResettingPassword(false);
-    }
   };
 
   // --- Variation Handlers ---
@@ -1104,6 +515,17 @@ const App = () => {
   const removeExistingImage = (url: string) => {
     setExistingImages(prev => prev.filter(u => u !== url));
   };
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    return products.filter(p => {
+      const matchesSearch = (p.name || '').toLowerCase().includes(productSearchTerm.toLowerCase()) || 
+                            (p.brand || '').toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                            (p.code || '').toLowerCase().includes(productSearchTerm.toLowerCase());
+      const matchesCategory = !categoryFilter || p.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, productSearchTerm, categoryFilter]);
 
   // --- Render ---
   if (isCatalogRoute) {
@@ -1155,7 +577,7 @@ const App = () => {
               <p className="text-xs font-medium text-slate-500 mt-1">Sistema de Gestão</p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={onLogin} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider ml-1">E-mail</label>
                 <input 
@@ -1205,7 +627,7 @@ const App = () => {
                 <button 
                   type="button" 
                   disabled={isResettingPassword}
-                  onClick={handleForgotPassword} 
+                  onClick={onForgotPassword} 
                   className="text-[11px] font-bold text-slate-800 uppercase tracking-wider hover:underline disabled:opacity-50 flex items-center gap-1"
                 >
                   {isResettingPassword ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
@@ -1237,18 +659,18 @@ const App = () => {
 
   return (
     <>
-      <div className="h-screen flex overflow-hidden bg-slate-50 font-sans text-gray-900">
+      <div className="h-screen flex overflow-hidden bg-gray-50 font-sans text-gray-900">
         <Sidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
           user={user} 
-          handleLogout={handleLogout} 
+          handleLogout={onLogout} 
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
           storeSettings={storeSettings}
         />
 
-        <main className={`flex-1 transition-all duration-200 ease-in-out h-screen overflow-y-auto flex flex-col pb-20 lg:pb-0 ${isSidebarOpen ? 'lg:pl-72' : 'lg:pl-[72px]'}`}>
+        <main className={`flex-1 transition-all duration-200 ease-in-out h-screen overflow-y-auto flex flex-col pb-20 lg:pb-0 bg-gray-50 ${isSidebarOpen ? 'lg:pl-72' : 'lg:pl-[72px]'}`}>
           <Header 
             setIsSidebarOpen={setIsSidebarOpen} 
             activeTab={activeTab} 
@@ -1257,10 +679,10 @@ const App = () => {
             setIsQuickSaleModalOpen={setIsQuickSaleModalOpen}
             notificationsCount={notifications.length}
             storeSettings={storeSettings}
-            handleLogout={handleLogout}
+            handleLogout={onLogout}
           />
 
-          <div className="flex-1 pt-7 px-3 pb-3 md:p-6 max-w-7xl mx-auto w-full">
+          <div className={`flex-1 pt-4 sm:pt-7 px-3 pb-3 md:px-8 md:py-6 w-full mx-auto bg-gray-50 ${(activeTab === 'relatorios' || activeTab === 'raio-x' || activeTab === 'vendas' || activeTab === 'compras' || activeTab === 'clientes' || activeTab === 'financeiro' || activeTab === 'performance' || activeTab === 'nova-venda') ? 'max-w-none !px-4 sm:!px-6 md:!px-10' : 'max-w-[1600px]'}`}>
             <AnimatePresence mode="wait">
               <div key={activeTab}>
                 {activeTab === 'dashboard' && (
@@ -1269,12 +691,31 @@ const App = () => {
                     products={products} 
                     customers={customers} 
                     expenses={expenses}
+                    purchases={purchases}
                     storeSettings={storeSettings}
                     monthlyGoal={toNum(storeSettings.monthly_goal) || 10000} 
                     user={user}
                   />
                 )}
                 
+                {activeTab === 'raio-x' && (
+                  <StoreXRay 
+                    sales={sales} 
+                    products={products} 
+                    expenses={expenses}
+                    purchases={purchases}
+                    storeSettings={storeSettings}
+                  />
+                )}
+
+                {activeTab === 'performance' && (
+                  <InventoryPerformance 
+                    products={products}
+                    sales={sales}
+                    formatCurrency={formatCurrency}
+                  />
+                )}
+
                 {activeTab === 'vendas' && (
                   <SalesList 
                     sales={sales} 
@@ -1283,6 +724,10 @@ const App = () => {
                     setSalesSearchTerm={setSalesSearchTerm}
                     salesDateFilter={salesDateFilter}
                     setSalesDateFilter={setSalesDateFilter}
+                    salesStartDate={salesStartDate}
+                    setSalesStartDate={setSalesStartDate}
+                    salesEndDate={salesEndDate}
+                    setSalesEndDate={setSalesEndDate}
                     globalMonthFilter={globalMonthFilter}
                     setGlobalMonthFilter={setGlobalMonthFilter}
                     salesPaymentFilter={salesPaymentFilter}
@@ -1292,12 +737,13 @@ const App = () => {
                     salesStatusFilter={salesStatusFilter}
                     setSalesStatusFilter={setSalesStatusFilter}
                     handleEdit={handleEdit} 
-                    handleDeleteSale={handleDeleteSale}
-                    handleCancelItem={handleCancelItem}
+                    handleDeleteSale={onDeleteSale}
+                    handleCancelSale={onCancelSale}
+                    handleCancelItem={onCancelItem}
                     onNewSale={() => {
                       setEditingSale(null);
                       setCart([]);
-                      setSaleDiscount(0);
+                      setSaleDiscount('0');
                       setActiveTab('nova-venda');
                     }}
                     user={user}
@@ -1316,7 +762,7 @@ const App = () => {
                     categoryFilter={categoryFilter}
                     setCategoryFilter={setCategoryFilter}
                     categories={categories}
-                    handleAdjustStock={handleAdjustStock}
+                    handleAdjustStock={onAdjustStock}
                     handleDeleteProduct={async (id) => {
                       showConfirm('Inativar Produto', 'O produto será marcado como inativo e não aparecerá nas novas vendas, mas seu histórico será preservado. Confirmar?', async () => {
                         try {
@@ -1330,7 +776,7 @@ const App = () => {
                     handleEdit={handleEdit}
                     formatCurrency={formatCurrency}
                     toNum={toNum}
-                    onPromote={handlePromote}
+                    onPromote={onTogglePromote}
                     getCssColor={getCssColor}
                     storeSettings={storeSettings}
                     loadMore={loadMoreProducts}
@@ -1375,6 +821,7 @@ const App = () => {
                     sales={sales} 
                     expenses={expenses} 
                     products={products}
+                    purchases={purchases}
                     storeSettings={storeSettings}
                     formatCurrency={formatCurrency} 
                     toNum={toNum} 
@@ -1460,7 +907,7 @@ const App = () => {
                     setIsModalOpen={setIsModalOpen}
                     setModalType={setModalType}
                     setEditingItem={setEditingItem}
-                    handleResetPassword={handleResetUserPassword}
+                    handleResetPassword={onResetUserPassword}
                   />
                 )}
 
@@ -1491,7 +938,7 @@ const App = () => {
                     products={products}
                     customers={customers}
                     sellers={users}
-                    handleCompleteSale={handleCompleteSale}
+                    handleCompleteSale={onCompleteSale}
                     showNotification={showNotification}
                     isFullPage={true}
                     storeSettings={storeSettings}
@@ -1563,7 +1010,7 @@ const App = () => {
           <ProductForm 
             key={editingItem?.id || 'new_product'}
             editingItem={editingItem}
-            handleAddProduct={handleAddProduct}
+            handleAddProduct={onAddProduct}
             tempVariations={tempVariations}
             addVariation={addVariation}
             updateVariation={updateVariation}
@@ -1579,23 +1026,23 @@ const App = () => {
         )}
 
         {modalType === 'clientes' && (
-          <CustomerForm key={editingItem?.id || 'new_customer'} editingItem={editingItem} handleAddCustomer={handleAddCustomer} />
+          <CustomerForm key={editingItem?.id || 'new_customer'} editingItem={editingItem} handleAddCustomer={onAddCustomer} />
         )}
 
         {modalType === 'gastos' && (
-          <TransactionForm key={editingItem?.id || 'new_expense'} editingItem={editingItem} handleAddTransaction={handleAddTransaction} />
+          <TransactionForm key={editingItem?.id || 'new_expense'} editingItem={editingItem} handleAddTransaction={onAddTransaction} />
         )}
 
         {modalType === 'financeiro' && (
-          <TransactionForm key={editingItem?.id || 'new_finance'} editingItem={editingItem} handleAddTransaction={handleAddTransaction} />
+          <TransactionForm key={editingItem?.id || 'new_finance'} editingItem={editingItem} handleAddTransaction={onAddTransaction} />
         )}
 
         {modalType === 'vendedores' && (
-          <SellerForm key={editingItem?.id || 'new_seller'} editingItem={editingItem} handleAddSeller={handleAddUser} />
+          <SellerForm key={editingItem?.id || 'new_seller'} editingItem={editingItem} handleAddSeller={onAddUser} />
         )}
 
         {modalType === 'anuncios' && (
-          <AdForm key={editingItem?.id || 'new_ad'} editingItem={editingItem} handleAddAd={handleAddAd} />
+          <AdForm key={editingItem?.id || 'new_ad'} editingItem={editingItem} handleAddAd={onAddAd} />
         )}
       </Modal>
 
@@ -1617,7 +1064,7 @@ const App = () => {
         products={products}
         customers={customers}
         sellers={users}
-        handleCompleteSale={handleCompleteSale}
+        handleCompleteSale={onCompleteSale}
         showNotification={showNotification}
         storeSettings={storeSettings}
         loadMoreProducts={loadMoreProducts}
@@ -1634,7 +1081,7 @@ const App = () => {
         onClose={() => setIsChangePasswordModalOpen(false)} 
         title="Alterar Minha Senha"
       >
-        <form onSubmit={handleUpdatePassword} className="space-y-4">
+        <form onSubmit={onUpdatePassword} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-400 uppercase ml-1">Senha Atual</label>
             <input 

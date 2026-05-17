@@ -34,8 +34,8 @@ export const ProductForm = ({
   isUploading,
   storeSettings
 }: ProductFormProps) => {
-  const [calcCost, setCalcCost] = React.useState(editingItem?.cost?.toString() || '');
-  const [calcFrete, setCalcFrete] = React.useState(editingItem?.frete?.toString() || '');
+  const [calcCost, setCalcCost] = React.useState(editingItem?.cost?.toString()?.replace('.', ',') || '');
+  const [calcFrete, setCalcFrete] = React.useState(editingItem?.frete?.toString()?.replace('.', ',') || '');
 
   const suggestion = React.useMemo(() => {
     const cost = toNum(calcCost);
@@ -132,7 +132,7 @@ export const ProductForm = ({
             name="price" 
             type="text" 
             inputMode="decimal" 
-            defaultValue={editingItem?.price} 
+            defaultValue={editingItem?.price?.toString()?.replace('.', ',')} 
             className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-midnight outline-none text-sm font-bold text-midnight" 
             required 
           />
@@ -158,6 +158,21 @@ export const ProductForm = ({
           {tempVariations.length > 0 && <p className="text-[8px] text-amber-600 font-bold">Calculado pelas variações</p>}
         </div>
       </div>
+
+      {editingItem && (
+        <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+            <label className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Ajuste de Estoque</label>
+          </div>
+          <input 
+            name="stock_adjustment_reason" 
+            placeholder="Motivo do ajuste (ex: Contagem física, Devolução, Perda...)" 
+            className="w-full px-3 py-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-500 outline-none text-xs bg-white/50"
+          />
+          <p className="text-[9px] text-amber-600 italic">Preencha apenas se estiver alterando as quantidades manualmente.</p>
+        </div>
+      )}
 
       <div className="space-y-4">
         <label className="text-xs font-bold text-gray-400 uppercase ml-1 block">Imagens do Produto</label>

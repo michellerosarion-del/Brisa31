@@ -18,7 +18,9 @@ export const Pricing = ({ formatCurrency, toNum, storeSettings }: PricingProps) 
   });
 
   const handleInputChange = (key: string, value: string) => {
-    setPricingData({ ...pricingData, [key]: value });
+    if (/^-?\d*[.,]?\d*$/.test(value) || value === '' || value === '-') {
+      setPricingData({ ...pricingData, [key]: value });
+    }
   };
 
   const cost = toNum(pricingData.cost);
@@ -110,63 +112,63 @@ export const Pricing = ({ formatCurrency, toNum, storeSettings }: PricingProps) 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
         {/* INPUTS COLUMN */}
         <div className="lg:col-span-12 xl:col-span-5 space-y-6">
-          <div className="bg-white p-8 rounded-[1.5rem] border border-slate-200 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-full -mr-12 -mt-12 border-l border-b border-slate-100" />
+          <Card className="p-8 rounded-[1.5rem] border border-slate-300 shadow-2xl relative overflow-hidden bg-white">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-full -mr-12 -mt-12 border-l border-b border-slate-200" />
             
-            <h3 className="font-serif italic text-xs text-slate-400 uppercase tracking-widest mb-6 pb-2 border-b border-slate-50">1. Dados da Operação</h3>
+            <h3 className="font-serif italic text-xs text-slate-600 uppercase tracking-widest mb-6 pb-2 border-b border-slate-100">1. Dados da Operação</h3>
             
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-[#1f2937] uppercase tracking-[0.2em] block pl-1">Custo de Compra</label>
+                <label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] block pl-1">Custo de Compra</label>
                 <div className="group relative">
-                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-black transition-colors" />
+                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-black transition-colors" />
                   <input 
                     type="text" 
                     inputMode="decimal"
                     value={pricingData.cost}
                     onChange={(e) => handleInputChange('cost', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-50 bg-slate-50/30 focus:bg-white focus:border-black outline-none font-black text-xl text-black transition-all shadow-sm"
+                    className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50/30 focus:bg-white focus:border-black outline-none font-black text-xl text-black transition-all shadow-sm"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-[#1f2937] uppercase tracking-[0.2em] block pl-1">Frete / Entregas</label>
+                <label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] block pl-1">Frete / Entregas</label>
                 <div className="group relative">
-                  <TrendingUp className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-black transition-colors" />
+                  <TrendingUp className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-black transition-colors" />
                   <input 
                     type="text" 
                     inputMode="decimal"
                     value={pricingData.frete}
                     onChange={(e) => handleInputChange('frete', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-50 bg-slate-50/30 focus:bg-white focus:border-black outline-none font-black text-xl text-black transition-all shadow-sm"
+                    className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50/30 focus:bg-white focus:border-black outline-none font-black text-xl text-black transition-all shadow-sm"
                     placeholder="0.00"
                   />
                 </div>
               </div>
             </div>
 
-            <h3 className="font-serif italic text-xs text-slate-400 uppercase tracking-widest mb-6 pb-2 border-b border-slate-50">2. Estratégia de Ganho</h3>
+            <h3 className="font-serif italic text-xs text-slate-600 uppercase tracking-widest mb-6 pb-2 border-b border-slate-100">2. Estratégia de Ganho</h3>
 
             <div className="space-y-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center px-1">
-                  <label className="text-[10px] font-black text-[#1f2937] uppercase tracking-[0.2em]">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">
                     {pricingMode === 'margin' ? 'Lucro por Venda (%)' : 'Lucro por Acréscimo (%)'}
                   </label>
                   {pricingMode === 'margin' && (
-                    <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest border border-blue-100">Máx: 99.9%</span>
+                    <span className="text-[9px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest border border-blue-200">Máx: 99.9%</span>
                   )}
                 </div>
                 <div className="group relative">
-                  <Percent className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${showMarkupHint ? 'text-red-500' : 'text-slate-300 group-focus-within:text-black'}`} />
+                  <Percent className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${showMarkupHint ? 'text-red-600' : 'text-slate-400 group-focus-within:text-black'}`} />
                   <input 
                     type="text" 
                     inputMode="decimal"
                     value={pricingData.margin}
                     onChange={(e) => handleInputChange('margin', e.target.value)}
-                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border-2 ${showMarkupHint ? 'border-red-500 bg-red-50/30 scale-[0.98]' : 'border-slate-50 bg-slate-50/30 focus:bg-white focus:border-black'} outline-none font-black text-4xl text-black transition-all shadow-md`}
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border-2 ${showMarkupHint ? 'border-red-500 bg-red-50/30 scale-[0.98]' : 'border-slate-200 bg-slate-50/30 focus:bg-white focus:border-black'} outline-none font-black text-4xl text-black transition-all shadow-md`}
                   />
                   {showMarkupHint && (
                     <div className="mt-4 p-4 bg-red-50 rounded-2xl border border-red-200 animate-in fade-in slide-in-from-top-2">
@@ -179,28 +181,28 @@ export const Pricing = ({ formatCurrency, toNum, storeSettings }: PricingProps) 
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-[#1f2937] uppercase tracking-[0.2em] block pl-1">Taxa Máquina/Cartão (%)</label>
+                <label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] block pl-1">Taxa Máquina/Cartão (%)</label>
                 <div className="group relative">
-                  <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-black transition-colors" />
+                  <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-black transition-colors" />
                   <input 
                     type="text" 
                     inputMode="decimal"
                     value={pricingData.cardFee}
                     onChange={(e) => handleInputChange('cardFee', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-50 bg-slate-50/30 focus:bg-white focus:border-black outline-none font-black text-xl text-black transition-all shadow-sm"
+                    className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 border-slate-200 bg-slate-50/30 focus:bg-white focus:border-black outline-none font-black text-xl text-black transition-all shadow-sm"
                   />
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="bg-slate-100 p-6 rounded-[1.5rem] flex items-start gap-4 border border-slate-200">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm">
-              <Info className="w-5 h-5 text-blue-600" />
+          </Card>
+
+          <div className="bg-slate-50 p-6 rounded-[1.5rem] flex items-start gap-4 border border-slate-300">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-200">
+              <Info className="w-5 h-5 text-blue-700" />
             </div>
             <div className="space-y-1">
               <p className="text-[9px] font-black text-blue-900 uppercase tracking-widest leading-none">Dica de Gestão</p>
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              <p className="text-xs text-slate-800 leading-relaxed font-bold">
                 {pricingMode === 'margin' 
                   ? "Foca no que sobra no caixa após todas as taxas." 
                   : "Foca no retorno sobre o investimento inicial."}
@@ -211,21 +213,21 @@ export const Pricing = ({ formatCurrency, toNum, storeSettings }: PricingProps) 
 
         {/* RESULTS COLUMN */}
         <div className="lg:col-span-12 xl:col-span-7 flex flex-col gap-10">
-          <div className="bg-[#000000] text-white p-8 lg:p-12 rounded-[2.5rem] shadow-[0_40px_60px_-15px_rgba(0,0,0,0.3)] relative overflow-hidden h-full flex flex-col justify-between group">
+          <Card className="text-slate-900 p-8 lg:p-12 rounded-[2.5rem] shadow-2xl border-2 border-slate-200 relative overflow-hidden h-full flex flex-col justify-between group bg-white">
             {/* Background Glows */}
-            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-gradient-radial from-white/10 to-transparent opacity-40 -mr-32 -mt-32 transition-transform group-hover:scale-110 duration-1000" />
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-gradient-radial from-slate-100 to-transparent opacity-40 -mr-32 -mt-32 transition-transform group-hover:scale-110 duration-1000" />
             
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-10">
-                <div className="w-1 h-5 bg-white/20 rounded-full" />
-                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Análise de Viabilidade</h4>
+                <div className="w-1 h-5 bg-slate-200 rounded-full" />
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Análise de Viabilidade</h4>
               </div>
               
               <div className="space-y-12">
                 <div className="space-y-4">
-                  <label className="text-white/40 text-sm font-medium block border-b border-white/10 pb-2 max-w-fit pr-8">Preço de venda sugerido</label>
+                  <label className="text-slate-500 text-sm font-black block border-b border-slate-100 pb-2 max-w-fit pr-8">Preço de venda sugerido</label>
                   <div className="flex items-baseline gap-4 flex-wrap">
-                    <h1 className="text-6xl lg:text-8xl font-black tracking-tighter leading-none text-white transition-all transform hover:scale-[1.01] cursor-default">
+                    <h1 className="text-6xl lg:text-8xl font-black tracking-tighter leading-none text-slate-950 transition-all transform hover:scale-[1.01] cursor-default">
                       {isImpossible ? 'ERRO' : formatCurrency(suggestedPrice)}
                     </h1>
                   </div>
@@ -233,71 +235,71 @@ export const Pricing = ({ formatCurrency, toNum, storeSettings }: PricingProps) 
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 lg:gap-14 pt-6">
                   <div className="space-y-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 block">Lucro p/ Venda</span>
-                    <p className={`text-4xl lg:text-5xl font-black ${isImpossible ? 'text-white/20' : 'text-emerald-400'}`}>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 block">Lucro p/ Venda</span>
+                    <p className={`text-4xl lg:text-5xl font-black ${isImpossible ? 'text-slate-200' : 'text-emerald-600'}`}>
                       {isImpossible ? '---' : formatCurrency(netProfit)}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 block">Rentabilidade</span>
-                    <p className="text-4xl lg:text-5xl font-black text-white">
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 block">Rentabilidade</span>
+                    <p className="text-4xl lg:text-5xl font-black text-slate-950">
                       {isImpossible ? '---' : `${(realMarginOnSale || 0).toFixed(1)}%`}
                     </p>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20 block">Margem líquida</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-300 block">Margem líquida</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="relative z-10 mt-12 p-6 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-white/10 transition-colors">
+            <div className="relative z-10 mt-12 p-6 bg-white rounded-2xl border border-slate-300 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-slate-400 transition-all">
               <div className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] animate-pulse" />
                 <div className="space-y-0.5">
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50 block leading-none">Ponto de Equilíbrio</span>
-                  <span className="text-[8px] font-medium text-white/30 block uppercase tracking-tighter">Preço mínimo de faturamento</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 block leading-none">Ponto de Equilíbrio</span>
+                  <span className="text-[8px] font-black text-slate-400 block uppercase tracking-tighter">Preço mínimo de faturamento</span>
                 </div>
               </div>
-              <span className="text-2xl font-black tracking-tighter">{formatCurrency(equilibriumPrice)}</span>
+              <span className="text-2xl font-black tracking-tighter text-slate-950">{formatCurrency(equilibriumPrice)}</span>
             </div>
-          </div>
+          </Card>
 
           {/* AUDIT CARDS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="p-8 bg-white border border-slate-200 rounded-[2rem] shadow-sm space-y-4 hover:border-slate-300 transition-colors">
+            <div className="p-8 bg-white border border-slate-300 rounded-[2rem] shadow-md hover:shadow-lg space-y-4 hover:border-slate-400 transition-colors">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fluxo Financeiro</h4>
-                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center"><CreditCard className="w-3.5 h-3.5 text-slate-400" /></div>
+                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Fluxo Financeiro</h4>
+                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200"><CreditCard className="w-3.5 h-3.5 text-slate-600" /></div>
               </div>
               <div className="space-y-4">
-                <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-50">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Bruto:</span>
+                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-slate-200 shadow-inner">
+                  <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.15em]">Bruto:</span>
                   <span className="font-black text-black text-base">{formatCurrency(suggestedPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center px-4">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">(-) Taxa:</span>
-                  <span className="font-black text-red-500 font-mono text-sm">-{formatCurrency(suggestedPrice * feeDecimal)}</span>
+                  <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.15em]">(-) Taxa:</span>
+                  <span className="font-black text-rose-600 font-mono text-sm">-{formatCurrency(suggestedPrice * feeDecimal)}</span>
                 </div>
-                <div className="flex justify-between items-center bg-emerald-50/10 p-4 rounded-xl border border-emerald-100">
+                <div className="flex justify-between items-center bg-emerald-50/10 p-4 rounded-xl border border-emerald-200">
                   <span className="text-[10px] font-black text-emerald-900 uppercase tracking-widest leading-none">Líquido:</span>
-                  <span className="font-black text-emerald-700 text-lg leading-none">{formatCurrency(valorLiquido)}</span>
+                  <span className="font-black text-emerald-800 text-lg leading-none">{formatCurrency(valorLiquido)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-8 bg-white border border-slate-200 rounded-[2rem] shadow-sm space-y-4 hover:border-slate-300 transition-colors">
+            <div className="p-8 bg-white border border-slate-300 rounded-[2rem] shadow-md hover:shadow-lg space-y-4 hover:border-slate-400 transition-colors">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meta de Retorno</h4>
-                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center"><TrendingUp className="w-3.5 h-3.5 text-slate-400" /></div>
+                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Meta de Retorno</h4>
+                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200"><TrendingUp className="w-3.5 h-3.5 text-slate-600" /></div>
               </div>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-50">
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em] block mb-1">Markup</span>
+                  <div className="p-4 bg-gray-50 rounded-xl border border-slate-200 shadow-sm">
+                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.1em] block mb-1">Markup</span>
                     <span className="font-black text-black text-lg">{realMarkupOnCost.toFixed(1)}%</span>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-50">
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em] block mb-1">Custo Tot.</span>
-                    <span className="font-black text-red-500 text-lg">{formatCurrency(totalCost)}</span>
+                  <div className="p-4 bg-gray-50 rounded-xl border border-slate-200 shadow-sm">
+                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-[0.1em] block mb-1">Custo Tot.</span>
+                    <span className="font-black text-rose-700 text-lg">{formatCurrency(totalCost)}</span>
                   </div>
                 </div>
                 <div className="p-4 bg-slate-900 rounded-xl flex justify-between items-center text-white">

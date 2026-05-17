@@ -42,7 +42,7 @@ export const SellersList = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sellers.map((seller) => (
+        {sellers?.map((seller) => (
           <Card key={seller.id} className="p-6 border-none shadow-soft group hover:shadow-xl transition-all duration-500">
             <div className="flex items-start justify-between mb-6">
               <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-midnight group-hover:bg-midnight group-hover:text-white transition-colors duration-500">

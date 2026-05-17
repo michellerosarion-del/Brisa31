@@ -13,10 +13,12 @@ import {
   Wallet,
   Tag,
   BarChart3,
+  PieChart,
   UserCog,
   Menu,
   ChevronLeft,
-  Truck
+  Truck,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -60,6 +62,8 @@ export const Sidebar = ({ activeTab, setActiveTab, user, handleLogout, isSidebar
       title: 'RELATÓRIOS',
       items: [
         { id: 'relatorios', label: 'Relatórios', icon: BarChart3, adminOnly: true },
+        { id: 'performance', label: 'Estoque & Vendas', icon: PieChart, adminOnly: true },
+        { id: 'raio-x', label: 'Raio-X da Loja', icon: Activity, adminOnly: true },
       ]
     },
     {
@@ -76,12 +80,12 @@ export const Sidebar = ({ activeTab, setActiveTab, user, handleLogout, isSidebar
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[1000] lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      <aside className={`fixed top-0 left-0 h-full bg-slate-950 text-slate-400 z-50 transition-all duration-200 ease-in-out flex flex-col shadow-2xl overflow-visible ${isSidebarOpen ? 'w-72 translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-[72px]'}`}>
+      <aside className={`fixed top-0 left-0 h-full bg-slate-950 text-slate-400 z-[1001] transition-all duration-200 ease-in-out flex flex-col shadow-2xl overflow-visible ${isSidebarOpen ? 'w-72 translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-[72px]'}`}>
         {/* Toggle Button for Desktop */}
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}

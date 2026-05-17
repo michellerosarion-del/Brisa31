@@ -7,13 +7,13 @@
 
   --breakpoint-xs: 480px;
 
-  --color-midnight: #1e293b;
-  --color-champagne: #f1f5f9;
-  --color-champagne-dark: #e2e8f0;
-  --color-champagne-light: #f8fafc;
+  --color-midnight: #0f172a;
+  --color-champagne: #f8fafc;
+  --color-champagne-dark: #f1f5f9;
+  --color-champagne-light: #ffffff;
   
   /* Override default colors to match theme */
-  --color-primary: #3b82f6;
+  --color-primary: #0f172a;
   --color-secondary: var(--color-champagne);
 }
 
@@ -25,25 +25,46 @@
   }
 
   body {
-    @apply font-sans text-slate-950 bg-[#f8f9fa] text-sm sm:text-[13px] leading-relaxed subpixel-antialiased;
-    color: #000000 !important;
+    @apply font-sans text-slate-950 bg-slate-50 text-[14px] leading-relaxed subpixel-antialiased;
+    color: #0f172a !important;
     opacity: 1 !important;
     filter: none !important;
   }
   
   * {
-    -webkit-font-smoothing: subpixel-antialiased;
-    -moz-osx-font-smoothing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
-  h1, h2, h3, h4, h5, h6, p, span, div, td, th {
-    @apply font-sans font-bold tracking-tight break-words;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-black tracking-tight text-slate-900 uppercase;
+  }
+
+  p, span, div, td, th {
+    @apply font-sans font-bold tracking-tight text-slate-700;
     color: inherit;
-    opacity: 1 !important;
   }
 
   input, select, textarea, button {
     @apply text-base sm:text-[13px] outline-none;
+  }
+
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    body {
+      background: white !important;
+      padding: 0 !important;
+    }
+    main {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    .card {
+      box-shadow: none !important;
+      border: 1px solid #eee !important;
+    }
   }
 }
 

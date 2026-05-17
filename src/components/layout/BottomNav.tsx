@@ -17,7 +17,7 @@ export const BottomNav = ({ activeTab, setActiveTab, setIsSidebarOpen }: BottomN
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-2 py-1.5 z-50 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-2 py-1.5 z-[1001] flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = activeTab === item.id;
