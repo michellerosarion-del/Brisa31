@@ -360,6 +360,23 @@ export const CashControl = ({
             value: fin.tax_value
           };
         }).filter(i => i.value > 0);
+      } else if (category === 'Outros') {
+        items = periodExpenses.filter((e: any) => {
+          if (e.flow_type === 'entrada') return false;
+          const t = (e.type || '').toLowerCase();
+          const c = (e.category || '').toLowerCase();
+          const isOperational = t.includes('fixo') || t.includes('operacional') || c.includes('operacional');
+          const isMarketing = t.includes('anúncio') || c.includes('marketing');
+          return !isOperational && !isMarketing;
+        }).map(e => {
+          const displayType = e.type && e.type !== 'outros' ? `[${e.type.toUpperCase()}] ` : '';
+          return {
+            id: e.id,
+            date: e.date,
+            description: `${displayType}${e.description}`,
+            value: toNum(e.value)
+          };
+        });
       } else {
         items = periodExpenses.filter((e: any) => {
           const matchesType = (e.type || '').toLowerCase().includes(searchType) || (e.category || '').toLowerCase().includes(searchType);

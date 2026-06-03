@@ -229,7 +229,19 @@ export const Purchases = () => {
     setReceiving(true);
     try {
       await runTransaction(db, async (transaction) => {
-        // 1. COLLECT ALL READS FIRST
+        // 1. READ TARGET PURCHASE FIRST TO PREVENT CONCURRENT DOUBLE PROCESSES
+        const purchaseRef = doc(db, 'compras', purchase.id);
+        const purchaseDoc = await transaction.get(purchaseRef);
+        if (!purchaseDoc.exists()) {
+          throw new Error('purchase_not_found');
+        }
+        
+        const purchaseCurrentData = purchaseDoc.data();
+        if (purchaseCurrentData?.status !== 'pending') {
+          throw new Error('already_received');
+        }
+
+        // 2. COLLECT ALL PRODUCT READS (Firestore requires all reads first)
         const uniqueProdIds = Array.from(new Set(purchase.items.map(it => it.product_id)));
         const productRefsMap: Record<string, any> = {};
         const productDataMap: Record<string, Product> = {};
@@ -244,7 +256,7 @@ export const Purchases = () => {
           productDataMap[prodId] = prodDoc.data() as Product;
         }
 
-        // 2. PREPARE WRITES
+        // 3. PREPARE WRITES
         const updatedProducts: Record<string, Product> = JSON.parse(JSON.stringify(productDataMap));
 
         for (const item of purchase.items) {
@@ -299,12 +311,11 @@ export const Purchases = () => {
           });
         }
 
-        // 3. EXECUTE UPDATES
+        // 4. EXECUTE UPDATES
         for (const prodId of uniqueProdIds) {
           transaction.update(productRefsMap[prodId], updatedProducts[prodId] as any);
         }
 
-        const purchaseRef = doc(db, 'compras', purchase.id);
         transaction.update(purchaseRef, { 
           status: 'received',
           received_at: new Date().toISOString()
@@ -313,9 +324,15 @@ export const Purchases = () => {
 
       showNotification('Mercadoria recebida e estoque atualizado!', 'success');
       setSelectedPurchase(prev => prev ? { ...prev, status: 'received' } as Purchase : null);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      showNotification('Erro ao receber mercadoria', 'error');
+      if (error.message === 'already_received') {
+        showNotification('Esta compra já foi recebida!', 'error');
+      } else if (error.message === 'purchase_not_found') {
+        showNotification('Compra não encontrada no banco de dados', 'error');
+      } else {
+        showNotification('Erro ao receber mercadoria', 'error');
+      }
     } finally {
       setReceiving(false);
     }
@@ -588,10 +605,20 @@ export const Purchases = () => {
                           e.stopPropagation();
                           handleReceivePurchase(purchase);
                         }}
-                        className="w-full mt-2 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                        disabled={receiving}
+                        className="w-full mt-2 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Receber Mercadoria
+                        {receiving ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            RECEBENDO...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Receber Mercadoria
+                          </>
+                        )}
                       </button>
                     )}
                   </div>

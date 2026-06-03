@@ -86,6 +86,52 @@ export const SalesList = ({
 }: SalesListProps) => {
   const [datePreset, setDatePreset] = React.useState('custom');
 
+  const formatSaleDateTime = (s: any) => {
+    if (s.createdAt) {
+      try {
+        const dt = new Date(s.createdAt);
+        if (!isNaN(dt.getTime())) {
+          return {
+            date: dt.toLocaleDateString('pt-BR'),
+            time: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            hasTime: true
+          };
+        }
+      } catch (e) {
+        console.error("Error parsing createdAt:", e);
+      }
+    }
+    
+    if (s.date && typeof s.date === 'string' && s.date.includes('-')) {
+      const parts = s.date.split('T')[0].split('-');
+      if (parts.length === 3) {
+        const [year, month, day] = parts;
+        return {
+          date: `${day}/${month}/${year}`,
+          time: '',
+          hasTime: false
+        };
+      }
+    }
+
+    try {
+      const dt = new Date(s.date);
+      if (!isNaN(dt.getTime())) {
+        return {
+          date: dt.toLocaleDateString('pt-BR'),
+          time: '',
+          hasTime: false
+        };
+      }
+    } catch (e) {}
+
+    return {
+      date: s.date || '',
+      time: '',
+      hasTime: false
+    };
+  };
+
   const handlePresetChange = (preset: string) => {
     setDatePreset(preset);
     const today = new Date();
@@ -323,14 +369,21 @@ export const SalesList = ({
                 return (
                   <tr key={s.id} className={`hover:bg-slate-50/30 transition-all group ${!isSaleCompleted(s) ? 'opacity-70 grayscale' : ''}`}>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-900 leading-none mb-1.5 uppercase">
-                          {new Date(s.date).toLocaleDateString('pt-BR')}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-bold lowercase tracking-wider">
-                          {new Date(s.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
+                      {(() => {
+                        const { date, time, hasTime } = formatSaleDateTime(s);
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-slate-900 leading-none mb-1.5 uppercase">
+                              {date}
+                            </span>
+                            {hasTime && (
+                              <span className="text-[10px] text-slate-400 font-bold lowercase tracking-wider">
+                                {time}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col min-w-[200px]">
@@ -432,9 +485,14 @@ export const SalesList = ({
             <div key={s.id} className={`bg-white rounded-xl p-3 shadow-sm border border-slate-100 space-y-3 transition-all active:scale-[0.98] ${!isSaleCompleted(s) ? 'opacity-80 grayscale' : ''}`}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                    {new Date(s.date).toLocaleDateString('pt-BR')} • {new Date(s.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  {(() => {
+                    const { date, time, hasTime } = formatSaleDateTime(s);
+                    return (
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                        {hasTime ? `${date} • ${time}` : date}
+                      </p>
+                    );
+                  })()}
                   <h4 className="text-sm font-bold text-slate-900 tracking-tight leading-tight">{s.customer_name || 'Consumidor Final'}</h4>
                 </div>
                 <span className={`px-1.5 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest border ${

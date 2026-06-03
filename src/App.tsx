@@ -147,6 +147,19 @@ const App = () => {
 
   const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.hash + window.location.search);
   
+  const [quotaError, setQuotaError] = useState<any>(() => (window as any).__firestore_quota_exceeded || null);
+
+  useEffect(() => {
+    const handleQuotaError = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setQuotaError(detail || true);
+    };
+    window.addEventListener('firestore-quota-exceeded', handleQuotaError);
+    return () => {
+      window.removeEventListener('firestore-quota-exceeded', handleQuotaError);
+    };
+  }, []);
+  
   // Hooks de Dados
   const { user, authLoading, login, logout, resetPassword, changePassword } = useAuth();
   const { storeSettings } = useStoreSettings(!!user);
@@ -528,6 +541,59 @@ const App = () => {
   }, [products, productSearchTerm, categoryFilter]);
 
   // --- Render ---
+  if (quotaError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-xl w-full bg-white rounded-2xl shadow-xl border border-slate-200/60 p-6 sm:p-10 text-center animate-fade-in">
+          <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-100/50">
+            <svg className="w-8 h-8 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 mb-3 uppercase tracking-tight">
+            Limite de Armazenamento/Leitura Excedido
+          </h1>
+          
+          <p className="text-slate-600 mb-6 text-sm leading-relaxed font-semibold">
+            Sua base de dados do Firebase atingiu o limite de cota gratuita diária (Spark Plan) para leitura de dados. O limite será redefinido automaticamente amanhã.
+          </p>
+
+          <div className="mb-8 p-4 bg-amber-50 rounded-xl border border-amber-100 text-left space-y-3 shadow-inner">
+            <p className="text-xs font-black text-amber-800 uppercase tracking-widest">Informações Importantes:</p>
+            <p className="text-xs leading-relaxed text-amber-700 font-bold">
+              As cotas do Cloud Firestore sob o plano Spark (gratuito) são limitadas a <span className="underline">50.000 leituras por dia</span>. 
+              Para restaurar o acesso imediato e evitar interrupções, você pode ativar o faturamento ou verificar sua cota no console do Firebase.
+            </p>
+            <div className="pt-2 text-center">
+              <a 
+                href="https://console.firebase.google.com/project/gen-lang-client-0238185019/firestore/databases/ai-studio-e80e99fc-359b-4ee2-9909-399265ced653/data?openUpgradeDialog=true"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-black text-slate-900 bg-white border border-slate-350 hover:bg-slate-50 transition-all px-4 py-2 rounded-lg shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Fazer Upgrade de Cota no Firebase ↗
+              </a>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              (window as any).__firestore_quota_exceeded = null;
+              window.location.reload();
+            }}
+            className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 hover:bg-black transition-all shadow-md active:scale-[0.98]"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15H18" />
+            </svg>
+            Recarregar Sistema
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isCatalogRoute) {
     return <CatalogPage initialProducts={products} initialSettings={storeSettings} />;
   }
@@ -1005,6 +1071,13 @@ const App = () => {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         title={editingItem ? `Editar ${modalType.slice(0, -1)}` : `Novo ${modalType.slice(0, -1)}`}
+        maxWidth={
+          modalType === 'produtos' 
+            ? 'max-w-3xl' 
+            : modalType === 'vendas' || modalType === 'vendas_pdv' 
+            ? 'max-w-3xl'
+            : 'max-w-xl'
+        }
       >
         {modalType === 'produtos' && (
           <ProductForm 

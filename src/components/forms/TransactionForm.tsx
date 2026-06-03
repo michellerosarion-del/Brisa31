@@ -31,6 +31,10 @@ export const TransactionForm = ({ editingItem, handleAddTransaction }: Transacti
             <option value="marketing">Marketing</option>
             <option value="estoque">Estoque</option>
             <option value="taxa">Taxa</option>
+            <option value="equipamentos">Equipamentos</option>
+            <option value="estrutura">Estrutura</option>
+            <option value="embalagens">Embalagens</option>
+            <option value="transporte">Transporte</option>
             <option value="outros">Outros</option>
           </select>
         </div>
