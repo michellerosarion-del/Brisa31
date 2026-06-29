@@ -444,7 +444,7 @@ export const ProfitReport = ({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">Investimento em Mercadorias</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fluxo de caixa aplicado em estoque</p>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Fluxo de caixa aplicado em estoque</p>
             </div>
           </div>
 
@@ -454,7 +454,7 @@ export const ProfitReport = ({
                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Recebido</p>
                 <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(dashboard.purchasesMetrics.received)}</p>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-widest">{dashboard.purchasesMetrics.countReceived} pedidos em estoque</p>
+              <p className="text-[10px] font-bold text-slate-600 mt-4 uppercase tracking-widest">{dashboard.purchasesMetrics.countReceived} pedidos em estoque</p>
             </div>
 
             <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100 flex flex-col justify-between">
@@ -462,17 +462,17 @@ export const ProfitReport = ({
                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Pendente</p>
                 <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(dashboard.purchasesMetrics.pending)}</p>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-widest">{dashboard.purchasesMetrics.countPending} aguardando</p>
+              <p className="text-[10px] font-bold text-slate-600 mt-4 uppercase tracking-widest">{dashboard.purchasesMetrics.countPending} aguardando</p>
             </div>
           </div>
           
           <div className="mt-8 grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
              <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Logística total</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Logística total</p>
                 <p className="text-lg font-black text-slate-900">{formatCurrency(dashboard.purchasesMetrics.receivedFreight + dashboard.purchasesMetrics.pendingFreight)}</p>
              </div>
              <div className="text-right">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Eficiência Logística</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Eficiência Logística</p>
                 <p className="text-lg font-black text-emerald-600">
                   {((dashboard.purchasesMetrics.receivedFreight / (dashboard.purchasesMetrics.received || 1)) * 100).toFixed(1)}%
                 </p>
@@ -486,8 +486,8 @@ export const ProfitReport = ({
               <Package className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">Composição Financeira</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Distribuição de custos e lucratividade</p>
+              <h3 className="text-base sm:text-lg font-black text-slate-800 uppercase tracking-tight">Composição Financeira</h3>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Distribuição de custos e lucratividade</p>
             </div>
           </div>
           
@@ -532,7 +532,7 @@ export const ProfitReport = ({
             </div>
             <div>
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tighter">Curva ABC de Faturamento</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Escaneamento estratégico de rentabilidade da grade</p>
+              <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Escaneamento estratégico de rentabilidade da grade</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -554,11 +554,11 @@ export const ProfitReport = ({
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="pl-12 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">Produto</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none text-right">Faturamento</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none text-right">Participação</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none text-right">Acumulado</th>
-                  <th className="pr-12 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none text-center">Classificação</th>
+                  <th className="pl-12 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none">Produto</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Faturamento</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Participação</th>
+                  <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Acumulado</th>
+                  <th className="pr-12 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-center">Classificação</th>
                 </tr>
               </thead>
             <tbody className="divide-y divide-slate-50">
@@ -566,11 +566,11 @@ export const ProfitReport = ({
                 <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
                   <td className="pl-12 py-6">
                      <p className="font-black text-slate-900 text-base leading-tight">{item.name}</p>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ranking #{idx + 1}</p>
+                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Ranking #{idx + 1}</p>
                   </td>
                   <td className="px-6 py-6 text-right font-black text-slate-900 text-base">{formatCurrency(item.revenue)}</td>
-                  <td className="px-6 py-6 text-right font-black text-slate-500 text-sm italic">{item.participation.toFixed(1)}%</td>
-                  <td className="px-6 py-6 text-right font-bold text-slate-400 text-xs tracking-widest">{item.cumulativePercent.toFixed(1)}%</td>
+                  <td className="px-6 py-6 text-right font-black text-slate-600 text-sm italic">{item.participation.toFixed(1)}%</td>
+                  <td className="px-6 py-6 text-right font-bold text-slate-600 text-xs tracking-widest">{item.cumulativePercent.toFixed(1)}%</td>
                   <td className="pr-12 py-6 text-center">
                     <span className={`inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] ${
                       item.classification === 'A' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' :
@@ -602,8 +602,8 @@ export const ProfitReport = ({
         <Card className="lg:col-span-2 p-8 rounded-[2.5rem] bg-white shadow-xl border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Curva de Lucratividade</h3>
-              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Performance dos últimos 7 dias</p>
+              <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase">Curva de Lucratividade</h3>
+              <p className="text-xs font-bold text-slate-600 mt-1 uppercase tracking-widest">Performance dos últimos 7 dias</p>
             </div>
             <div className="flex items-center gap-3 px-4 py-2 bg-emerald-50 rounded-2xl border border-emerald-100 shadow-inner">
               <TrendingUp className="w-5 h-5 text-emerald-600" />
@@ -650,7 +650,7 @@ export const ProfitReport = ({
                 <Info className="w-6 h-6 text-emerald-400" />
               </div>
               <h3 className="text-xl font-black text-white tracking-tight uppercase mb-2">Insight de Performance</h3>
-              <p className="text-sm text-slate-300 font-medium leading-relaxed">
+              <p className="text-sm text-slate-200 font-medium leading-relaxed">
                 {(dashboard.profitMargin || 0) > 30 ? 
                   'Sua operação está com uma margem excelente! Continue monitorando o giro de estoque para manter o caixa saudável.' :
                   'Atenção às taxas adquirentes e descontos. Pequenos ajustes na precificação podem aumentar significativamente seu lucro líquido.'
@@ -659,12 +659,12 @@ export const ProfitReport = ({
            </div>
 
            <div className="relative z-10 pt-10 border-t border-white/10 mt-10">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Meta Mensal</p>
+              <p className="text-[10px] font-black text-slate-200 uppercase tracking-[0.4em] mb-4">Meta Mensal</p>
               <div className="flex items-baseline gap-3 mb-4">
                  <span className="text-5xl font-black text-white tracking-tighter">
                    {((dashboard.monthlyRevenue / (toNum(storeSettings.monthly_goal) || 1)) * 100).toFixed(0)}%
                  </span>
-                 <span className="text-xs font-bold text-slate-400">da meta atingida</span>
+                 <span className="text-xs font-bold text-slate-300">da meta atingida</span>
               </div>
               <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
                  <div 
@@ -683,8 +683,8 @@ export const ProfitReport = ({
               <TrendingUp className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Investimento em Marketing</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">ROI e Performance por Plataforma</p>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight uppercase">Investimento em Marketing</h3>
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1">ROI e Performance por Plataforma</p>
             </div>
           </div>
           <button 
@@ -705,11 +705,11 @@ export const ProfitReport = ({
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="pl-12 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.3em] leading-none">Plataforma</th>
-                  <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.3em] leading-none">Investimento</th>
-                  <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.3em] leading-none text-center">Conversão</th>
-                  <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.3em] leading-none text-center">ROI</th>
-                  <th className="pr-12 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.3em] leading-none text-right">Ações</th>
+                  <th className="pl-12 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.3em] leading-none">Plataforma</th>
+                  <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.3em] leading-none">Investimento</th>
+                  <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.3em] leading-none text-center">Conversão</th>
+                  <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.3em] leading-none text-center">ROI</th>
+                  <th className="pr-12 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.3em] leading-none text-right">Ações</th>
                 </tr>
               </thead>
             <tbody className="divide-y divide-slate-50">
@@ -720,7 +720,7 @@ export const ProfitReport = ({
                   <td className="px-6 py-6 text-sm text-slate-600 font-black text-center">{ad.sales_generated} vendas</td>
                   <td className="px-6 py-6 text-center">
                     <span className="inline-flex px-4 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-                      {toNum(ad.investment) > 0 ? (toNum(ad.sales_generated) / toNum(ad.investment)).toFixed(2) : '0.00'}x <span className="ml-1 opacity-50">ROI</span>
+                      {toNum(ad.investment) > 0 ? (toNum(ad.sales_generated) / toNum(ad.investment)).toFixed(2) : '0.00'}x <span className="ml-1 text-emerald-800">ROI</span>
                     </span>
                   </td>
                   <td className="pr-12 py-6 text-right">
@@ -741,7 +741,7 @@ export const ProfitReport = ({
                   <td colSpan={5} className="px-12 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Info className="w-10 h-10 text-slate-100" />
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nenhum anúncio registrado para este período</p>
+                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Nenhum anúncio registrado para este período</p>
                     </div>
                   </td>
                 </tr>

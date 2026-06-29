@@ -106,6 +106,7 @@ import { StoreXRay } from './modules/Reports/StoreXRay';
 import { InventoryPerformance } from './modules/Reports/InventoryPerformance';
 import { CatalogPage } from './pages/Catalog';
 import { QuickSaleModal } from './modules/Sales/QuickSaleModal';
+import { StockMovementModal } from './components/StockMovementModal';
 
 // Form Components
 import { ProductForm } from './components/forms/ProductForm';
@@ -147,6 +148,26 @@ const App = () => {
 
   const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.hash + window.location.search);
   
+  // Special Stock Movement Modal States
+  const [isStockMovementOpen, setIsStockMovementOpen] = useState(false);
+  const [stockMovementSelectedProduct, setStockMovementSelectedProduct] = useState<Product | null>(null);
+
+  const handleSaveStockMovement = async (data: {
+    productId: string;
+    variationId?: string | null;
+    type: 'avaria' | 'uso_interno' | 'ajuste_positivo' | 'ajuste_negativo';
+    quantity: number;
+    observation: string;
+    user: any;
+  }) => {
+    try {
+      await registerSpecialStockMovement(data);
+      showNotification('Movimentação registrada com sucesso!');
+    } catch (err: any) {
+      throw new Error(err.message || 'Erro ao registrar a movimentação especial.');
+    }
+  };
+  
   const [quotaError, setQuotaError] = useState<any>(() => (window as any).__firestore_quota_exceeded || null);
 
   useEffect(() => {
@@ -167,7 +188,7 @@ const App = () => {
 
   const { 
     products, stockMovements, categories, loadMoreProducts, loadMoreStock,
-    saveProduct, uploadImages, adjustStock, toggleFeatured 
+    saveProduct, uploadImages, adjustStock, registerSpecialStockMovement, toggleFeatured 
   } = useProducts(!!user);
 
   const { 
@@ -263,12 +284,40 @@ const App = () => {
     const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
     try {
       const uploadedUrls = await uploadImages(selectedFiles);
-      await saveProduct(data, editingItem, user, tempVariations, existingImages, uploadedUrls);
-      showNotification(editingItem ? 'Produto atualizado!' : 'Produto cadastrado!');
+      
+      // Inicia a gravação real no Firestore
+      const savePromise = saveProduct(data, editingItem, user, tempVariations, existingImages, uploadedUrls);
+      
+      // Fecha o modal e notifica o usuário imediatamente para manter a interface ultra responsiva
+      showNotification(
+        editingItem 
+          ? 'Alterações salvas localmente (sincronizando na nuvem...)' 
+          : 'Produto criado localmente (sincronizando na nuvem...)',
+        'success'
+      );
       setIsModalOpen(false);
       setSelectedFiles([]);
+      
+      // Acompanha a sincronização real com o Firestore Cloud em segundo plano
+      savePromise
+        .then(() => {
+          showNotification(
+            editingItem 
+              ? 'Produto sincronizado e salvo no Firestore Cloud!' 
+              : 'Novo produto sincronizado e salvo no Firestore Cloud!',
+            'success'
+          );
+        })
+        .catch((err: any) => {
+          console.error('[Erro de Sincronização Cloud]:', err);
+          showNotification(
+            `FALHA de sincronização: O produto "${data.name}" NÃO foi salvo na nuvem. Verifique sua conexão.`,
+            'error'
+          );
+        });
+        
     } catch (err: any) {
-      showNotification(err.message || 'Erro ao salvar produto', 'error');
+      showNotification(err.message || 'Erro ao preparar produto', 'error');
     } finally {
       setIsUploading(false);
     }
@@ -314,7 +363,8 @@ const App = () => {
       setEditingSale(null);
       setSaleDiscount('0');
     } catch (err: any) {
-      showNotification('Erro ao processar venda', 'error');
+      console.error('Error in onCompleteSale:', err);
+      showNotification(err?.message || 'Erro ao processar venda', 'error');
     }
   };
 
@@ -847,6 +897,10 @@ const App = () => {
                     storeSettings={storeSettings}
                     loadMore={loadMoreProducts}
                     user={user}
+                    onOpenStockMovement={(prod) => {
+                      setStockMovementSelectedProduct(prod || null);
+                      setIsStockMovementOpen(true);
+                    }}
                   />
                 )}
 
@@ -1147,6 +1201,18 @@ const App = () => {
         isOpen={!!confirmConfig}
         onClose={() => setConfirmConfig(null)}
         config={confirmConfig || {}}
+      />
+
+      <StockMovementModal
+        isOpen={isStockMovementOpen}
+        onClose={() => {
+          setIsStockMovementOpen(false);
+          setStockMovementSelectedProduct(null);
+        }}
+        products={products}
+        currentUser={user}
+        preSelectedProduct={stockMovementSelectedProduct}
+        onSave={handleSaveStockMovement}
       />
 
       <Modal 

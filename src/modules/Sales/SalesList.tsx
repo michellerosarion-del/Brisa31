@@ -354,13 +354,13 @@ export const SalesList = ({
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-100/60">
-                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Data</th>
-                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Cliente / Itens</th>
-                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Vendedor</th>
-                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Financeiro</th>
-                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none">Forma</th>
-                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none text-center">Status</th>
-                <th className="px-6 py-5 font-black text-slate-300 text-[10px] uppercase tracking-[0.2em] leading-none text-right">Controles</th>
+                <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] leading-none">Data</th>
+                <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] leading-none">Cliente / Itens</th>
+                <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] leading-none">Vendedor</th>
+                <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] leading-none">Financeiro</th>
+                <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] leading-none">Forma</th>
+                <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] leading-none text-center">Status</th>
+                <th className="px-6 py-5 font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] leading-none text-right">Controles</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/50">
@@ -377,7 +377,7 @@ export const SalesList = ({
                               {date}
                             </span>
                             {hasTime && (
-                              <span className="text-[10px] text-slate-400 font-bold lowercase tracking-wider">
+                              <span className="text-[10px] text-slate-500 font-bold lowercase tracking-wider">
                                 {time}
                               </span>
                             )}
@@ -387,29 +387,29 @@ export const SalesList = ({
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col min-w-[200px]">
-                        <span className={`text-sm font-black tracking-tight leading-tight uppercase ${!isSaleCompleted(s) ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                        <span className={`text-sm font-black tracking-tight leading-tight uppercase ${!isSaleCompleted(s) ? 'line-through text-slate-500' : 'text-slate-950'}`}>
                           {s.customer_name || 'Consumidor Final'}
                         </span>
                         <div className="mt-2 flex flex-wrap gap-1">
                           {s.items?.slice(0, 3).map((it: any, idx: number) => (
-                            <span key={idx} className="px-2 py-0.5 bg-slate-50 rounded-lg text-[9px] font-black text-slate-500 border border-slate-200/60 uppercase">
+                            <span key={idx} className="px-2 py-0.5 bg-slate-50 rounded-lg text-[9px] font-black text-slate-600 border border-slate-200/60 uppercase">
                               {it.quantity}x {it.product_name}
                             </span>
                           ))}
                           {s.items && s.items.length > 3 && (
-                            <span className="text-[10px] font-black text-slate-400 ml-1">+{s.items.length - 3}</span>
+                            <span className="text-[10px] font-black text-slate-500 ml-1">+{s.items.length - 3}</span>
                           )}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <span className="px-3 py-1 bg-slate-100/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-slate-200/50">
+                      <span className="px-3 py-1 bg-slate-100/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 border border-slate-200/50">
                         {s.seller_name || '-'}
                       </span>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex flex-col items-start">
-                        <span className={`text-sm font-black tracking-tight ${!isSaleCompleted(s) ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                        <span className={`text-sm font-black tracking-tight ${!isSaleCompleted(s) ? 'line-through text-slate-500' : 'text-slate-900'}`}>
                           {formatCurrency(financials.valor_bruto)}
                         </span>
                         <span className="text-[10px] text-emerald-600 font-black uppercase tracking-tighter mt-0.5">
@@ -512,7 +512,7 @@ export const SalesList = ({
 
               <div className="flex justify-between items-end pt-2 border-t border-slate-50">
                 <div className="space-y-0.5">
-                  <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Total</p>
+                  <p className="text-[8px] font-bold text-slate-700 uppercase tracking-widest">Total</p>
                   <p className="text-base font-black text-slate-900 tracking-tighter">
                     {formatCurrency(financials.valor_bruto)}
                   </p>

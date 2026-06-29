@@ -133,8 +133,8 @@ export const ProductService = {
         }
       }
 
-      for (const mov of movements) {
-        await addDoc(estoqueMovimentacoesRef, mov);
+      if (movements.length > 0) {
+        await Promise.all(movements.map(mov => addDoc(estoqueMovimentacoesRef, mov)));
       }
 
       return updateDoc(doc(db, 'produtos', editingItem.id), productData);
@@ -201,6 +201,102 @@ export const ProductService = {
         usuario: user?.name || 'Sistema',
         date: new Date().toISOString(),
         createdAt: new Date().toISOString(),
+        variation_id: variationId || null
+      });
+    });
+  },
+
+  async registerSpecialStockMovement(data: {
+    productId: string;
+    variationId?: string | null;
+    type: 'avaria' | 'uso_interno' | 'ajuste_positivo' | 'ajuste_negativo';
+    quantity: number;
+    observation: string;
+    user: any;
+  }) {
+    const { productId, variationId, type, quantity, observation, user } = data;
+
+    if (quantity <= 0) {
+      throw new Error('A quantidade deve ser maior que zero.');
+    }
+
+    const isReduction = type === 'avaria' || type === 'uso_interno' || type === 'ajuste_negativo';
+    const amount = isReduction ? -quantity : quantity;
+
+    return runTransaction(db, async (transaction) => {
+      const prodRef = doc(db, 'produtos', productId);
+      const prodDoc = await transaction.get(prodRef);
+      if (!prodDoc.exists()) {
+        throw new Error('Produto não encontrado.');
+      }
+
+      const pData = prodDoc.data();
+      let currentCor = pData.cor || 'Única';
+      let currentTamanho = pData.tamanho || 'Único';
+      const updatedVars = pData.variations || [];
+
+      if (variationId && updatedVars.length > 0) {
+        const targetVarIndex = updatedVars.findIndex((v: any) => v.id === variationId);
+        if (targetVarIndex === -1) {
+          throw new Error('Variação não encontrada.');
+        }
+
+        const targetVar = updatedVars[targetVarIndex];
+        currentCor = targetVar.cor;
+        currentTamanho = targetVar.tamanho;
+
+        const currentVarStock = toNum(targetVar.estoque);
+        const newVarStock = currentVarStock + amount;
+
+        if (newVarStock < 0) {
+          throw new Error(`Saldo insuficiente na variação desejada. Saldo atual: ${currentVarStock} peça(s).`);
+        }
+
+        const newVariations = [...updatedVars];
+        newVariations[targetVarIndex] = {
+          ...targetVar,
+          estoque: newVarStock
+        };
+
+        const newTotalStock = newVariations.reduce((sum: number, v: any) => sum + toNum(v.estoque), 0);
+
+        transaction.update(prodRef, {
+          variations: newVariations,
+          stock: newTotalStock
+        });
+      } else {
+        const currentStock = toNum(pData.stock);
+        const newTotalStock = currentStock + amount;
+
+        if (newTotalStock < 0) {
+          throw new Error(`Saldo insuficiente no produto. Saldo atual: ${currentStock} peça(s).`);
+        }
+
+        transaction.update(prodRef, { stock: newTotalStock });
+      }
+
+      const movementRef = doc(estoqueMovimentacoesRef);
+      transaction.set(movementRef, {
+        productId,
+        productName: pData.name,
+        color: currentCor,
+        size: currentTamanho,
+        quantity,
+        type,
+        observation,
+        userName: user?.name || 'Sistema',
+        createdAt: new Date().toISOString(),
+
+        product_id: productId,
+        produto: pData.name,
+        marca: pData.brand || '',
+        cor: currentCor,
+        tamanho: currentTamanho,
+        quantidade: quantity,
+        tipo: isReduction ? 'saída' : 'entrada',
+        origem: type === 'avaria' ? 'avaria' : type === 'uso_interno' ? 'uso_interno' : type === 'ajuste_positivo' ? 'ajuste_positivo' : 'ajuste_negativo',
+        usuario: user?.name || 'Sistema',
+        date: new Date().toISOString(),
         variation_id: variationId || null
       });
     });

@@ -400,7 +400,7 @@ export const CashControl = ({
         <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-[110] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sincronizando dados...</p>
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando dados...</p>
           </div>
         </div>
       )}
@@ -413,7 +413,7 @@ export const CashControl = ({
                   <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Financeiro</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Financeiro</h3>
                   <p className="text-[10px] font-bold text-slate-600 mt-0.5 uppercase tracking-wider">Gestão de entradas e saídas</p>
                 </div>
               </div>
@@ -510,8 +510,8 @@ export const CashControl = ({
                 <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
               </div>
               <div>
-                <h4 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Entradas</h4>
-                <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none mt-1">Total</p>
+                <h4 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Entradas</h4>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 font-bold uppercase tracking-widest leading-none mt-1">Total</p>
               </div>
             </div>
             <div className="text-left sm:text-right w-full sm:w-auto">
@@ -546,7 +546,7 @@ export const CashControl = ({
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <PieChartIcon className="w-6 h-6 text-slate-400 mb-1" />
-                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Entradas</span>
+                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Entradas</span>
               </div>
             </div>
 
@@ -579,8 +579,8 @@ export const CashControl = ({
                 <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 text-rose-800" />
               </div>
               <div>
-                <h4 className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">Saídas</h4>
-                <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none mt-1">Total</p>
+                <h4 className="text-base sm:text-xl font-bold text-slate-800 tracking-tight">Saídas</h4>
+                <p className="text-[9px] sm:text-[10px] text-slate-600 font-bold uppercase tracking-widest leading-none mt-1">Total</p>
               </div>
             </div>
             <div className="text-left sm:text-right w-full sm:w-auto">
@@ -615,7 +615,7 @@ export const CashControl = ({
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <PieChartIcon className="w-6 h-6 text-slate-400 mb-1" />
-                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Saídas</span>
+                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Saídas</span>
               </div>
             </div>
 
@@ -661,18 +661,18 @@ export const CashControl = ({
                 </div>
               )}
             </div>
-            <p className="text-xs text-white font-bold max-w-sm leading-relaxed">
+            <p className="text-xs text-slate-200 font-bold max-w-sm leading-relaxed">
               Este é o valor líquido que permaneceu no caixa após todas as entradas e saídas operacionais e de estoque.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10 w-full lg:w-auto">
             <div className="p-5 bg-white/5 rounded-2xl border border-white/20 space-y-2">
-              <p className="text-[10px] font-black text-white uppercase tracking-widest">Entradas Totais</p>
+              <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest">Entradas Totais</p>
               <p className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tighter break-words">{formatCurrency(cash.inflow.total)}</p>
             </div>
             <div className="p-5 bg-white/5 rounded-2xl border border-white/20 space-y-2">
-              <p className="text-[10px] font-black text-white uppercase tracking-widest">Saídas Totais</p>
+              <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest">Saídas Totais</p>
               <p className="text-2xl sm:text-3xl font-black text-rose-400 tracking-tighter break-words">{formatCurrency(cash.outflow.total)}</p>
             </div>
           </div>

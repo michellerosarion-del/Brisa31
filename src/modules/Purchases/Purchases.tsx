@@ -563,7 +563,7 @@ export const Purchases = () => {
                           <Truck className="w-4 h-4 text-slate-600" />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fornecedor</p>
+                          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Fornecedor</p>
                           <h3 className="text-sm font-black text-slate-900 uppercase truncate max-w-[150px]">{purchase.supplier_name}</h3>
                         </div>
                       </div>
@@ -590,11 +590,11 @@ export const Purchases = () => {
 
                     <div className="flex justify-between items-end pt-2 border-t border-slate-50">
                       <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Total</p>
+                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Valor Total</p>
                         <p className="text-lg font-black text-slate-900">{formatCurrency(purchase.total_value)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Itens</p>
+                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Itens</p>
                         <p className="text-sm font-black text-slate-900">{purchase.items.length}</p>
                       </div>
                     </div>

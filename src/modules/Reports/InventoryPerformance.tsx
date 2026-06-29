@@ -38,8 +38,15 @@ export const InventoryPerformance = ({ products, sales, formatCurrency }: Invent
         return;
       }
 
+      const cost = toNum(p.cost);
+      const freight = toNum(p.frete);
+      const totalUnitCost = cost + freight;
+      const price = toNum(p.price);
+      const unitProfit = price - totalUnitCost;
+
       if (p.variations && p.variations.length > 0) {
         p.variations.forEach(v => {
+          const stock = toNum(v.estoque);
           data.push({
             id: `${p.id}-${v.id}`,
             productName: p.name,
@@ -47,11 +54,17 @@ export const InventoryPerformance = ({ products, sales, formatCurrency }: Invent
             category: p.category || 'Geral',
             color: v.cor || '---',
             size: v.tamanho || '---',
-            stock: toNum(v.estoque),
-            price: toNum(p.price)
+            stock,
+            cost,
+            freight,
+            totalUnitCost,
+            price,
+            unitProfit,
+            totalStockValue: stock * price
           });
         });
       } else {
+        const stock = toNum(p.stock);
         data.push({
           id: p.id,
           productName: p.name,
@@ -59,14 +72,47 @@ export const InventoryPerformance = ({ products, sales, formatCurrency }: Invent
           category: p.category || 'Geral',
           color: p.cor || '---',
           size: p.tamanho || '---',
-          stock: toNum(p.stock),
-          price: toNum(p.price)
+          stock,
+          cost,
+          freight,
+          totalUnitCost,
+          price,
+          unitProfit,
+          totalStockValue: stock * price
         });
       }
     });
 
     return data.sort((a, b) => b.stock - a.stock);
   }, [products, searchTerm, categoryFilter]);
+
+  // Aggregate totals for the financial summary fixed at the bottom of the page
+  const totals = useMemo(() => {
+    let qtdeTotal = 0;
+    let valorInvestido = 0;
+    let freteInvestido = 0;
+    let custoTotalEstoque = 0;
+    let valorPotencialVenda = 0;
+
+    inventoryData.forEach(item => {
+      qtdeTotal += item.stock;
+      valorInvestido += item.stock * item.cost;
+      freteInvestido += item.stock * item.freight;
+      custoTotalEstoque += item.stock * item.totalUnitCost;
+      valorPotencialVenda += item.stock * item.price;
+    });
+
+    const lucroPotencial = valorPotencialVenda - custoTotalEstoque;
+
+    return {
+      qtdeTotal,
+      valorInvestido,
+      freteInvestido,
+      custoTotalEstoque,
+      valorPotencialVenda,
+      lucroPotencial
+    };
+  }, [inventoryData]);
 
   // Performance Data (Best Selling Sizes and Colors)
   const performanceStats = useMemo(() => {
@@ -135,19 +181,46 @@ export const InventoryPerformance = ({ products, sales, formatCurrency }: Invent
 
     autoTable(doc, {
       startY: 25,
-      head: [['Produto', 'Cód', 'Categoria', 'Cor', 'Tam', 'Estoque', 'Preço Unit.']],
+      head: [['Produto', 'Cód', 'Cor', 'Tam', 'Estoque', 'Custo', 'Frete', 'Custo Total', 'Preço Venda', 'Lucro Unit.', 'Total Estoque']],
       body: inventoryData.map(item => [
         item.productName,
         item.code,
-        item.category,
         item.color,
         item.size,
         item.stock,
-        formatCurrency(item.price)
+        formatCurrency(item.cost),
+        formatCurrency(item.freight),
+        formatCurrency(item.totalUnitCost),
+        formatCurrency(item.price),
+        formatCurrency(item.unitProfit),
+        formatCurrency(item.totalStockValue)
       ]),
       headStyles: { fillColor: [30, 41, 59] },
       margin: { top: 25 },
-      styles: { fontSize: 8 }
+      styles: { fontSize: 7 }
+    });
+
+    // Add summary to PDF
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumo Financeiro do Estoque:', 14, finalY);
+    
+    autoTable(doc, {
+      startY: finalY + 5,
+      head: [['Peças em Estoque', 'Valor Investido', 'Frete Investido', 'Custo Total', 'Valor Potencial Venda', 'Lucro Potencial Bruto']],
+      body: [[
+        totals.qtdeTotal,
+        formatCurrency(totals.valorInvestido),
+        formatCurrency(totals.freteInvestido),
+        formatCurrency(totals.custoTotalEstoque),
+        formatCurrency(totals.valorPotencialVenda),
+        formatCurrency(totals.lucroPotencial)
+      ]],
+      headStyles: { fillColor: [16, 185, 129] },
+      margin: { left: 14 },
+      tableWidth: 'wrap',
+      styles: { fontSize: 8, fontStyle: 'bold' }
     });
 
     doc.addPage();
@@ -183,7 +256,7 @@ export const InventoryPerformance = ({ products, sales, formatCurrency }: Invent
       {/* Filters & Export */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <Package className="w-6 h-6 text-slate-400" />
             Estoque & Performance
           </h2>
@@ -280,32 +353,32 @@ export const InventoryPerformance = ({ products, sales, formatCurrency }: Invent
         <div className="p-10 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Análise de Estoque</h3>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight uppercase">Análise de Estoque</h3>
               <span className="bg-slate-950 text-white text-[10px] px-3 py-1 rounded-full font-black tracking-widest leading-none">
                 {inventoryData.length} ITENS
               </span>
             </div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Detalhamento por variação de produto</p>
+            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Detalhamento por variação de produto</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-950 transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-slate-950 transition-colors" />
               <input 
                 type="text"
                 placeholder="Buscar produto ou código..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-950/5 focus:bg-white transition-all w-64 shadow-inner"
+                className="pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-950/5 focus:bg-white transition-all w-64 shadow-inner text-slate-800"
               />
             </div>
             
             <div className="relative group">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-950 transition-colors" />
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-slate-950 transition-colors" />
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="pl-12 pr-10 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-950/5 focus:bg-white transition-all appearance-none cursor-pointer shadow-inner min-w-[200px]"
+                className="pl-12 pr-10 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-950/5 focus:bg-white transition-all appearance-none cursor-pointer shadow-inner min-w-[200px] text-slate-800"
               >
                 <option value="">Todas Categorias</option>
                 {categories.map(cat => (
@@ -318,72 +391,132 @@ export const InventoryPerformance = ({ products, sales, formatCurrency }: Invent
 
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full align-middle p-1">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
+            <table className="w-full text-left border-collapse min-w-[1100px]">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="pl-12 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none text-center">Ref</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none">Produto</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none text-center">Tam</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none text-center">Cor</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none text-center">Qtd</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none text-right">Preço</th>
-                <th className="pr-12 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none text-right">Total</th>
+                <th className="pl-8 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none mb-0">Produto</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-center">Cor</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-center">Tamanho</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-center">Estoque</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Custo Unit.</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Frete Unit.</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Custo Total</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Pr. Venda</th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Lucro Unit.</th>
+                <th className="pr-8 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] leading-none text-right">Val. Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {inventoryData.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
-                  <td className="pl-12 py-6 text-center">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.code}</span>
-                  </td>
-                  <td className="px-6 py-6">
+                  <td className="pl-8 py-6">
                     <div>
-                      <p className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">{item.productName}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{item.category}</p>
+                      <p className="text-sm font-black text-slate-800 leading-tight uppercase tracking-tight">{item.productName}</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Ref: {item.code} | {item.category}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-6 text-center">
+                  <td className="px-4 py-6 text-center">
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                      {item.color}
+                    </span>
+                  </td>
+                  <td className="px-4 py-6 text-center">
                     <span className="inline-flex px-3 py-1 bg-slate-100 text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest">
                       {item.size}
                     </span>
                   </td>
-                   <td className="px-6 py-6 text-center">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                      {item.color}
-                    </span>
-                  </td>
-                  <td className="px-6 py-6 text-center">
+                  <td className="px-4 py-6 text-center">
                     <div className="flex flex-col items-center">
                       <span className={`text-base font-black ${item.stock <= 2 ? 'text-rose-600' : 'text-slate-900'}`}>
                         {item.stock}
                       </span>
                       {item.stock <= 2 && (
-                        <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Baixo</span>
+                        <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">Baixo</span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-6 text-right">
-                    <span className="text-sm font-bold text-slate-500">{formatCurrency(item.price)}</span>
+                  <td className="px-4 py-6 text-right">
+                    <span className="text-xs font-semibold text-slate-600">{formatCurrency(item.cost)}</span>
                   </td>
-                  <td className="pr-12 py-6 text-right">
-                    <span className="text-base font-black text-slate-950">{formatCurrency(item.stock * item.price)}</span>
+                  <td className="px-4 py-6 text-right">
+                    <span className="text-xs font-semibold text-slate-600">{formatCurrency(item.freight)}</span>
+                  </td>
+                  <td className="px-4 py-6 text-right">
+                    <span className="text-xs font-bold text-slate-700">{formatCurrency(item.totalUnitCost)}</span>
+                  </td>
+                  <td className="px-4 py-6 text-right">
+                    <span className="text-xs font-semibold text-slate-700">{formatCurrency(item.price)}</span>
+                  </td>
+                  <td className="px-4 py-6 text-right">
+                    <span className={`text-xs font-bold ${item.unitProfit < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      {formatCurrency(item.unitProfit)}
+                    </span>
+                  </td>
+                  <td className="pr-8 py-6 text-right">
+                    <span className="text-sm font-black text-slate-950">{formatCurrency(item.totalStockValue)}</span>
                   </td>
                 </tr>
               ))}
               {inventoryData.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center">
+                  <td colSpan={10} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="p-3 bg-slate-50 rounded-full">
-                        <Search className="w-6 h-6 text-slate-300" />
+                        <Search className="w-6 h-6 text-slate-400" />
                       </div>
-                      <p className="text-xs text-slate-400 font-medium">Nenhum item encontrado com os filtros aplicados</p>
+                      <p className="text-xs text-slate-600 font-medium">Nenhum item encontrado com os filtros aplicados</p>
                     </div>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
+        </div>
+      </Card>
+
+      {/* Resumo Financeiro Fixo */}
+      <Card className="p-8 border-none shadow-2xl bg-slate-900 text-white rounded-[2.5rem]">
+        <div className="mb-6">
+          <h3 className="text-lg font-black uppercase tracking-widest text-[#10B981]">Resumo Financeiro do Estoque</h3>
+          <p className="text-xs text-slate-300 mt-1 uppercase font-semibold tracking-wider">Patrimônio, capital investido e retorno potencial da Brisa 31</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          {/* Card 1: Quantidade Total */}
+          <div className="bg-slate-800/40 border border-slate-700/30 p-5 rounded-2xl flex flex-col justify-between hover:bg-slate-800/60 transition-all">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-200">Total de Peças</span>
+            <span className="text-2xl font-black tracking-tight mt-2 text-white">{totals.qtdeTotal} <span className="text-xs font-bold text-slate-300 uppercase tracking-widest ml-1">unid</span></span>
+          </div>
+
+          {/* Card 2: Valor Investido */}
+          <div className="bg-slate-800/40 border border-slate-700/30 p-5 rounded-2xl flex flex-col justify-between hover:bg-slate-800/60 transition-all">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-200">Investido (Produtos)</span>
+            <span className="text-lg font-black tracking-tight mt-2 text-amber-500">{formatCurrency(totals.valorInvestido)}</span>
+          </div>
+
+          {/* Card 3: Frete Investido */}
+          <div className="bg-slate-800/40 border border-slate-700/30 p-5 rounded-2xl flex flex-col justify-between hover:bg-slate-800/60 transition-all">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-200">Frete Investido</span>
+            <span className="text-lg font-black tracking-tight mt-2 text-blue-400">{formatCurrency(totals.freteInvestido)}</span>
+          </div>
+
+          {/* Card 4: Custo Total */}
+          <div className="bg-slate-800/40 border border-slate-700/30 p-5 rounded-2xl flex flex-col justify-between hover:bg-slate-800/60 transition-all">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-200">Custo Total Estoque</span>
+            <span className="text-lg font-black tracking-tight mt-2 text-rose-400">{formatCurrency(totals.custoTotalEstoque)}</span>
+          </div>
+
+          {/* Card 5: Preço Potencial Venda */}
+          <div className="bg-slate-800/40 border border-slate-700/30 p-5 rounded-2xl flex flex-col justify-between hover:bg-slate-800/60 transition-all">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-200">Valor Potencial Venda</span>
+            <span className="text-lg font-black tracking-tight mt-2 text-[#3B82F6]">{formatCurrency(totals.valorPotencialVenda)}</span>
+          </div>
+
+          {/* Card 6: Lucro Potencial */}
+          <div className="bg-slate-800/40 border border-slate-700/30 p-5 rounded-2xl flex flex-col justify-between hover:bg-slate-800/60 transition-all">
+            <span className="text-[9px] font-black uppercase tracking-wider text-[#10B981]">Lucro Potencial Bruto</span>
+            <span className="text-lg font-black tracking-tight mt-2 text-[#10B981]">{formatCurrency(totals.lucroPotencial)}</span>
           </div>
         </div>
       </Card>

@@ -279,6 +279,22 @@ export const QuickSaleModal = ({
     return 0;
   };
 
+  // Sincroniza automaticamente o valor do pagamento único quando o valor total da venda se altera
+  React.useEffect(() => {
+    if (payments.length === 1) {
+      const p = payments[0];
+      if (toNum(p.amount) !== effectiveGrossValue) {
+        const feePerc = p.fee_percentage !== undefined ? toNum(p.fee_percentage) : getFeeForPayment(p.method, p.installments || 1);
+        setPayments([{
+          ...p,
+          amount: effectiveGrossValue,
+          fee_percentage: feePerc,
+          fee_value: effectiveGrossValue * (feePerc / 100)
+        }]);
+      }
+    }
+  }, [effectiveGrossValue, payments.length]);
+
   const addPayment = () => {
     const totalPaidSoFar = payments.reduce((sum, p) => sum + toNum(p.amount), 0);
     const remaining = Math.max(0, effectiveGrossValue - totalPaidSoFar);
@@ -753,7 +769,7 @@ export const QuickSaleModal = ({
 
             {/* Financial Summary */}
             <div className="pt-5 border-t border-slate-100 flex flex-col gap-2.5">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-1">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 px-1">
                 <span>Total de Itens</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
@@ -766,7 +782,7 @@ export const QuickSaleModal = ({
               )}
 
               <div className="flex flex-col gap-1.5 mt-1">
-                <label className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] ml-1">Ajuste de Saldo (R$)</label>
+                <label className="text-[10px] font-black text-slate-700 uppercase tracking-[0.2em] ml-1">Ajuste de Saldo (R$)</label>
                 <div className="flex gap-2">
                   <input 
                     type="text"
@@ -803,14 +819,14 @@ export const QuickSaleModal = ({
               )}
               
               <div className="flex flex-col pt-5 mt-2 border-t border-slate-100">
-                <div className={`flex justify-between items-center mb-2 px-1 ${Math.abs(totalPaid - effectiveGrossValue) > 0.01 ? 'text-rose-500' : 'text-slate-300'}`}>
+                <div className={`flex justify-between items-center mb-2 px-1 ${Math.abs(totalPaid - effectiveGrossValue) > 0.01 ? 'text-rose-500' : 'text-slate-600'}`}>
                   <span className="text-[10px] font-black uppercase tracking-[0.2em]">Fluxo de Caixa</span>
                   <span className="text-[10px] font-black uppercase tracking-widest">
                     {formatCurrency(totalPaid)} / {formatCurrency(effectiveGrossValue)}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-2 px-1">
-                  <span className="text-sm font-black text-slate-400">R$</span>
+                  <span className="text-sm font-black text-slate-600">R$</span>
                   <span className="text-5xl font-black text-slate-900 tracking-tighter leading-none">
                     {formatCurrency(effectiveGrossValue).replace('R$', '').trim()}
                   </span>

@@ -92,6 +92,7 @@ export const useProducts = (isSignedIn: boolean = false, initialLimit: number = 
     saveProduct: ProductService.saveProduct,
     uploadImages: ProductService.uploadImages,
     adjustStock: ProductService.adjustStock,
+    registerSpecialStockMovement: ProductService.registerSpecialStockMovement,
     toggleFeatured: ProductService.toggleFeatured
   };
 };

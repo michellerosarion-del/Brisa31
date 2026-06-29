@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Search, Filter, ChevronDown, Package, Plus, Minus, Flame, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, ChevronDown, Package, Plus, Minus, Flame, Edit, Trash2, ArrowUpDown } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Product } from '../../types';
 
@@ -21,6 +21,7 @@ interface ProductsListProps {
   storeSettings: any;
   loadMore: () => void;
   user: any;
+  onOpenStockMovement: (prod?: Product | null) => void;
 }
 
 export const ProductsList = ({ 
@@ -39,7 +40,8 @@ export const ProductsList = ({
   getCssColor,
   storeSettings,
   loadMore,
-  user
+  user,
+  onOpenStockMovement
 }: ProductsListProps) => {
   const [statusFilter, setStatusFilter] = React.useState('');
   const [visibleCount, setVisibleCount] = React.useState(50);
@@ -84,15 +86,25 @@ export const ProductsList = ({
           </div>
         </div>
 
-        {user?.role === 'admin' && (
+        <div className="flex gap-2">
           <button 
-            onClick={() => handleEdit('produtos', null)}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-900 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 shadow-lg"
+            onClick={() => onOpenStockMovement(null)}
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-slate-800 text-white rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:bg-slate-700/80 transition-all active:scale-95 border border-slate-700 shadow-lg"
           >
-            <Plus className="w-4 h-4" />
-            Novo Produto
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            Movimentar Estoque
           </button>
-        )}
+
+          {user?.role === 'admin' && (
+            <button 
+              onClick={() => handleEdit('produtos', null)}
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-slate-900 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 shadow-lg"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Novo Produto
+            </button>
+          )}
+        </div>
       </div>
 
       <Card className="p-3">
@@ -158,13 +170,13 @@ export const ProductsList = ({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <p className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-widest truncate mb-0.5 sm:mb-1">{p.brand}</p>
+                    <p className="text-[9px] sm:text-[11px] font-semibold text-slate-600 uppercase tracking-widest truncate mb-0.5 sm:mb-1">{p.brand}</p>
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1.5 sm:gap-2">
-                        <span className={`text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider ${p.status === 'inativo' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'}`}>
+                        <span className={`text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider ${p.status === 'inativo' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-700'}`}>
                           {p.status || 'ativo'}
                         </span>
-                        <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{p.code}</span>
+                        <span className="text-[8px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest">#{p.code}</span>
                       </div>
                       {(() => {
                         const totalStock = p.has_variations && p.variations 
@@ -268,6 +280,13 @@ export const ProductsList = ({
 
               <div className="flex items-center justify-end mt-auto pt-1">
                 <div className="flex gap-0.5">
+                  <button 
+                    onClick={() => onOpenStockMovement(p)}
+                    className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-all"
+                    title="Movimentação Especial"
+                  >
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                  </button>
                   <button 
                     onClick={() => onPromote(p.id)}
                     className={`p-1.5 rounded-md transition-all ${p.is_featured ? 'text-amber-600 bg-amber-50' : 'text-slate-600 hover:text-amber-700 hover:bg-amber-100'}`}

@@ -49,7 +49,24 @@ export const StoreXRay = ({
   const [allPurchases, setAllPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+
+  const monthsList = useMemo(() => {
+    const list = [];
+    const date = new Date();
+    for (let i = 0; i < 12; i++) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const value = `${year}-${month}`;
+      
+      const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+      
+      list.push({ value, label: capitalizedLabel });
+      date.setMonth(date.getMonth() - 1);
+    }
+    return list;
+  }, []);
 
   // 1. Independent Fetching for Full History Stats
   useEffect(() => {
@@ -96,18 +113,19 @@ export const StoreXRay = ({
     const globalData = calcularFinanceiro(allSales, allExpenses, allProducts, storeSettings);
     
     // 2. MONTHLY STATS
-    const mesData = calcularFinanceiro(allSales, allExpenses, allProducts, storeSettings, currentMonth);
+    const mesData = calcularFinanceiro(allSales, allExpenses, allProducts, storeSettings, selectedMonth);
 
     const activeSales = allSales.filter(s => isSaleCompleted(s));
     const activePurchases = allPurchases.filter(p => !p.status || p.status !== 'cancelled');
     
     // Stock Value
-    const stockValue = allProducts.reduce((acc, p) => {
+    const activeProductsForStock = allProducts.filter(p => p.status !== 'inativo');
+    const stockValue = activeProductsForStock.reduce((acc, p) => {
       const pCost = toNum(p.cost) + toNum((p as any).frete || 0);
       const pStock = toNum(p.stock);
       return acc + (pCost * pStock);
     }, 0);
-    const stockPieces = allProducts.reduce((acc, p) => acc + toNum(p.stock), 0);
+    const stockPieces = activeProductsForStock.reduce((acc, p) => acc + toNum(p.stock), 0);
 
     const pecasVendidasTotal = activeSales.reduce((acc, s) => {
       const itemsCount = s.items.reduce((sum, i) => sum + (i.status !== 'cancelado' ? toNum(i.quantity) : 0), 0);
@@ -125,7 +143,7 @@ export const StoreXRay = ({
     const totalPendente = pendingPurchases.reduce((acc, p) => acc + toNum(p.total_value) + (toNum(p.freight_total) || 0), 0);
 
     const comprasMes = receivedPurchases
-      .filter(p => p.date && p.date.startsWith(currentMonth))
+      .filter(p => p.date && p.date.startsWith(selectedMonth))
       .reduce((acc, p) => acc + toNum(p.total_value) + (toNum(p.freight_total) || 0), 0);
 
     // Ticket Médio
@@ -136,6 +154,13 @@ export const StoreXRay = ({
       const discount = fin.subtotal - fin.valor_bruto + (toNum((s as any).adjustment) || 0);
       return acc + (discount > 0 ? discount : 0);
     }, 0);
+
+    const activeSalesMonth = allSales.filter(s => isSaleCompleted(s) && (s.date || '').startsWith(selectedMonth));
+    const pecasVendidasMes = activeSalesMonth.reduce((acc, s) => {
+      const itemsCount = s.items.reduce((sum, i) => sum + (i.status !== 'cancelado' ? toNum(i.quantity) : 0), 0);
+      return acc + itemsCount;
+    }, 0);
+    const ticketMedioMes = activeSalesMonth.length > 0 ? mesData.totalBruto / activeSalesMonth.length : 0;
 
     return {
       stockValue: isNaN(stockValue) ? 0 : stockValue,
@@ -155,9 +180,11 @@ export const StoreXRay = ({
       faturamentoMes: mesData.totalBruto,
       mesData,
       comprasMes: isNaN(comprasMes) ? 0 : comprasMes,
-      activeSalesMonth: allSales.filter(s => isSaleCompleted(s) && (s.date || '').startsWith(currentMonth))
+      activeSalesMonth,
+      pecasVendidasMes,
+      ticketMedioMes
     };
-  }, [allSales, allProducts, allExpenses, allPurchases, storeSettings, currentMonth]);
+  }, [allSales, allProducts, allExpenses, allPurchases, storeSettings, selectedMonth]);
 
   const StatCard = ({ title, value, subValue, icon: Icon, colorClass, prefix = "" }: any) => (
     <Card className="p-6 relative overflow-hidden group hover:shadow-xl transition-all bg-white border-slate-200">
@@ -195,7 +222,7 @@ export const StoreXRay = ({
           <Activity className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Raio-X da Loja</h2>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Raio-X da Loja</h2>
           <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Visão Geral de Performance e Saúde do Negócio</p>
         </div>
       </div>
@@ -236,16 +263,16 @@ export const StoreXRay = ({
           <Card className="p-10 border-slate-100 bg-white text-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.05)] relative overflow-hidden rounded-[2.5rem]">
             <div className="absolute top-0 right-0 w-96 h-96 bg-slate-50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-50" />
             <div className="relative z-10 flex flex-col h-full border-b border-slate-50 pb-10 mb-10">
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-slate-400">Patrimônio Líquido Acumulado</p>
-              <h2 className={`text-6xl sm:text-8xl font-black tracking-tighter mb-4 ${stats.lucroReal >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-slate-600">Patrimônio Líquido Acumulado</p>
+              <h2 className={`text-6xl sm:text-8xl font-black tracking-tighter mb-4 ${stats.lucroReal >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                 {formatCurrency(stats.lucroReal)}
               </h2>
               <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${stats.lucroReal >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${stats.lucroReal >= 0 ? 'bg-emerald-50 text-emerald-700border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
                    {stats.lucroReal >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                    {stats.faturamentoTotal > 0 ? ((stats.lucroReal / stats.faturamentoTotal) * 100).toFixed(1) : 0}% de Margem Geral
                 </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">
                   Performance histórica da loja
                 </p>
               </div>
@@ -253,21 +280,21 @@ export const StoreXRay = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-10 relative z-10">
               <div className="group">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 group-hover:text-slate-950 transition-colors">Total Taxas</p>
-                <p className="text-2xl font-black text-rose-500 tracking-tighter">{formatCurrency(stats.totalTaxas)}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 mb-2 group-hover:text-slate-950 transition-colors">Total Taxas</p>
+                <p className="text-2xl font-black text-rose-600 tracking-tighter">{formatCurrency(stats.totalTaxas)}</p>
               </div>
               <div className="group">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 group-hover:text-slate-950 transition-colors">Markup Médio</p>
-                <p className="text-2xl font-black text-amber-500 tracking-tighter">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 mb-2 group-hover:text-slate-950 transition-colors">Markup Médio</p>
+                <p className="text-2xl font-black text-amber-600 tracking-tighter">
                   {(stats.faturamentoTotal - stats.lucroReal) > 0 ? (stats.faturamentoTotal / (stats.faturamentoTotal - stats.lucroReal)).toFixed(2) : 0}x
                 </p>
               </div>
               <div className="group">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 group-hover:text-slate-950 transition-colors">Ticket Médio</p>
-                <p className="text-2xl font-black text-blue-500 tracking-tighter">{formatCurrency(stats.ticketMedio)}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 mb-2 group-hover:text-slate-950 transition-colors">Ticket Médio</p>
+                <p className="text-2xl font-black text-blue-600 tracking-tighter">{formatCurrency(stats.ticketMedio)}</p>
               </div>
               <div className="group">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 group-hover:text-slate-950 transition-colors">Descontos</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 mb-2 group-hover:text-slate-950 transition-colors">Descontos</p>
                 <p className="text-2xl font-black text-slate-900 tracking-tighter">{formatCurrency(stats.totalDescontos)}</p>
               </div>
             </div>
@@ -276,16 +303,35 @@ export const StoreXRay = ({
 
         <div className="space-y-6">
           <Card className="p-8 bg-white border-slate-100 shadow-xl rounded-[2.5rem]">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="p-3 bg-slate-950 text-white rounded-2xl">
-                <Calendar className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-slate-950 text-white rounded-2xl shadow-lg shadow-slate-950/20">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-[0.2em]">Desempenho Mensal</h4>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Analise o mês desejado</p>
+                </div>
               </div>
-              <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Desempenho no Mês</h4>
+              <div className="relative">
+                <select 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="w-full sm:w-auto px-6 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black text-slate-800 outline-none focus:ring-2 focus:ring-slate-950/5 focus:bg-white transition-all cursor-pointer uppercase tracking-widest leading-none appearance-none"
+                >
+                  {monthsList.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+              </div>
             </div>
             <div className="space-y-6">
               <div className="flex justify-between items-center bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 group hover:border-slate-300 transition-all">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Faturamento Bruto</p>
+                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Faturamento Bruto</p>
                   <p className="text-xl font-black text-slate-900">{formatCurrency(stats.faturamentoMes)}</p>
                 </div>
                 <ArrowUpRight className="w-6 h-6 text-emerald-500" />
@@ -309,6 +355,30 @@ export const StoreXRay = ({
                     {formatCurrency(stats.activeSalesMonth.reduce((acc, s) => acc + toNum(s.discount_value), 0))}
                   </p>
                 </div>
+                <div className="bg-[#f0fdf4] p-5 rounded-[1.5rem] border border-emerald-100">
+                  <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1">Peças Vendidas</p>
+                  <p className="text-sm font-black text-emerald-900">
+                    {stats.pecasVendidasMes} unid
+                  </p>
+                </div>
+                <div className="bg-[#f5f3ff] p-5 rounded-[1.5rem] border border-purple-100">
+                  <p className="text-[10px] font-black text-purple-700 uppercase tracking-widest mb-1 font-black leading-none">Fat. Médio / Venda</p>
+                  <p className="text-sm font-black text-purple-900 mt-1">
+                    {formatCurrency(stats.ticketMedioMes)}
+                  </p>
+                </div>
+                <div className="bg-amber-50/50 p-5 rounded-[1.5rem] border border-amber-100">
+                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Custo do Estoque Vendido</p>
+                  <p className="text-sm font-black text-amber-900 mt-1">
+                    {formatCurrency(stats.mesData.custo)}
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-200">
+                  <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Taxas de Cartão</p>
+                  <p className="text-sm font-black text-slate-900 mt-1">
+                    {formatCurrency(stats.mesData.totalTaxasCartao)}
+                  </p>
+                </div>
               </div>
             </div>
           </Card>
@@ -318,12 +388,12 @@ export const StoreXRay = ({
               <div className="p-2 bg-white/10 rounded-xl">
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
               </div>
-              <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">Insights Mensais</p>
+              <p className="text-[10px] font-black text-slate-200 uppercase tracking-[0.2em]">Insights Mensais</p>
             </div>
-            <p className="text-xs font-bold text-white/90 leading-relaxed uppercase tracking-tighter">
-              Sua margem de contribuição este mês está em <span className="text-emerald-400">{stats.mesData.margemLucro.toFixed(1)}%</span>.
+            <p className="text-xs font-bold text-white leading-relaxed uppercase tracking-tighter">
+              Sua margem de contribuição no mês selecionado está em <span className="text-emerald-400">{stats.mesData.margemLucro.toFixed(1)}%</span>.
               <br />
-              <span className="text-[10px] text-white/40 mt-2 block">
+              <span className="text-[10px] text-slate-300 font-medium mt-2 block">
                 {stats.mesData.margemLucro > 30 ? 'Desempenho acima da média do mercado!' : 'Considere revisar suas taxas e custos fixos.'}
               </span>
             </p>

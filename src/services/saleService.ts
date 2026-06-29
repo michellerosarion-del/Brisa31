@@ -47,17 +47,37 @@ export const SaleService = {
       customer_id: customerId || 'consumidor-final',
       customer_name: customerName || 'Consumidor Final',
       date: saleDate,
-      payment_method: params.paymentMethod,
-      payments: payments || [],
+      payment_method: params.paymentMethod || 'pix',
+      payments: (payments || []).map(p => ({
+        method: p.method || 'pix',
+        amount: toNum(p.amount) || 0,
+        installments: toNum(p.installments) || 1,
+        fee_percentage: toNum(p.fee_percentage) || 0,
+        fee_value: toNum(p.fee_value) || 0
+      })),
       seller_id: user?.id || 'manual',
       seller_name: sellerName || 'Sistema',
       status: 'concluida',
-      items: cart.map(item => ({
-        ...item,
-        status: 'concluido',
-        cost: toNum(item.cost) || 0,
-        frete: toNum(item.frete) || 0
-      })),
+      items: cart.map(item => {
+        const cleanItem: any = {
+          product_id: item.product_id || '',
+          product_name: item.product_name || '',
+          quantity: toNum(item.quantity) || 1,
+          unit_price: toNum(item.unit_price) || 0,
+          status: 'concluido',
+          cost: toNum(item.cost) || 0,
+          frete: toNum(item.frete) || 0,
+          tamanho: item.tamanho || 'Único',
+          cor: item.cor || 'Padrão'
+        };
+        if (item.variation_id) {
+          cleanItem.variation_id = item.variation_id;
+        }
+        if (item.brand) {
+          cleanItem.brand = item.brand;
+        }
+        return cleanItem;
+      }),
       subtotal: toNum(cart.reduce((sum, i) => sum + (toNum(i.unit_price) * toNum(i.quantity)), 0)),
       discount_value: toNum(saleDiscount) || 0,
       discount_type: saleDiscountType,
@@ -80,6 +100,7 @@ export const SaleService = {
       }
       cart.forEach(i => productIds.add(i.product_id));
 
+      // 1. Fetch all product documents first (Reads phase)
       const productSnaps = new Map<string, any>();
       for (const pid of productIds) {
         const snap = await transaction.get(doc(db, 'produtos', pid));
@@ -88,6 +109,14 @@ export const SaleService = {
         }
       }
 
+      // 2. Fetch customer document if selected (Reads phase)
+      let customerDoc: any = null;
+      if (customerId && customerId !== 'consumidor-final') {
+        const customerRef = doc(db, 'clientes', customerId);
+        customerDoc = await transaction.get(customerRef);
+      }
+
+      // 3. Execution of writes begins here (Writes phase)
       if (editingSale) {
         for (const oldItem of editingSale.items) {
           if (oldItem.status === 'cancelado') continue;
@@ -125,11 +154,11 @@ export const SaleService = {
 
           transaction.set(doc(estoqueMovimentacoesRef), {
             product_id: item.product_id,
-            produto: item.product_name,
+            produto: item.product_name || '',
             marca: pData.brand || '',
-            cor: item.cor,
-            tamanho: item.tamanho,
-            quantidade: item.quantity,
+            cor: item.cor || 'Padrão',
+            tamanho: item.tamanho || 'Único',
+            quantidade: toNum(item.quantity) || 1,
             tipo: 'saída',
             origem: 'venda',
             usuario: user?.name || sellerName || 'Sistema',
@@ -141,32 +170,28 @@ export const SaleService = {
         }
       }
 
-      // 7. Update Customer Statistics
-      if (customerId && customerId !== 'consumidor-final') {
+      // 4. Update Customer Statistics (No further reads performed)
+      if (customerId && customerId !== 'consumidor-final' && customerDoc && customerDoc.exists()) {
         const customerRef = doc(db, 'clientes', customerId);
-        const customerDoc = await transaction.get(customerRef);
+        const customerData = customerDoc.data();
+        const currentSpent = toNum(customerData.total_spent || 0);
+        const currentPurchases = toNum(customerData.total_purchases || 0);
         
-        if (customerDoc.exists()) {
-          const customerData = customerDoc.data();
-          const currentSpent = toNum(customerData.total_spent || 0);
-          const currentPurchases = toNum(customerData.total_purchases || 0);
-          
-          let spentIncrement = toNum(grossValue);
-          let purchaseIncrement = 1;
+        let spentIncrement = toNum(grossValue);
+        let purchaseIncrement = 1;
 
-          if (editingSale) {
-            const oldGross = toNum(editingSale.valor_bruto);
-            spentIncrement = toNum(grossValue) - oldGross;
-            purchaseIncrement = 0; // Don't count as new purchase on edit
-          }
-
-          transaction.update(customerRef, {
-            total_spent: Math.max(0, currentSpent + spentIncrement),
-            total_purchases: Math.max(0, currentPurchases + purchaseIncrement),
-            last_purchase: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
+        if (editingSale) {
+          const oldGross = toNum(editingSale.valor_bruto);
+          spentIncrement = toNum(grossValue) - oldGross;
+          purchaseIncrement = 0; // Don't count as new purchase on edit
         }
+
+        transaction.update(customerRef, {
+          total_spent: Math.max(0, currentSpent + spentIncrement),
+          total_purchases: Math.max(0, currentPurchases + purchaseIncrement),
+          last_purchase: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
       }
 
       if (editingSale) {

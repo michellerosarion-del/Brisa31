@@ -27,7 +27,7 @@ export const StatCard = ({ title, value, icon, colorClass, trend }: StatCardProp
     </div>
 
     <div className="space-y-1">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">
+      <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em] leading-none">
         {title}
       </p>
       <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tighter leading-none">
